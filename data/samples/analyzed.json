@@ -1,0 +1,156 @@
+{
+  "tickets": [
+    {
+      "id": "a1b2c3d4-1111-4000-8000-000000000001",
+      "classification": {
+        "type": "outage",
+        "confidence": 0.92,
+        "services": ["auth-service", "api-gateway", "user-db"],
+        "summary": "Auth service returning 500 errors on login"
+      }
+    },
+    {
+      "id": "a1b2c3d4-2222-4000-8000-000000000002",
+      "classification": {
+        "type": "new_feature",
+        "confidence": 0.88,
+        "services": ["reporting-service", "export-api"],
+        "summary": "Feature request: Add bulk export to CSV for reports"
+      }
+    },
+    {
+      "id": "a1b2c3d4-3333-4000-8000-000000000003",
+      "classification": {
+        "type": "user_error",
+        "confidence": 0.85,
+        "services": [],
+        "summary": "How do I reset my 2FA? Can't find the option in settings"
+      }
+    },
+    {
+      "id": "a1b2c3d4-4444-4000-8000-000000000004",
+      "classification": {
+        "type": "wrong_team",
+        "confidence": 0.91,
+        "services": ["billing-service", "payment-worker"],
+        "summary": "Billing discrepancy: customer charged twice for subscription"
+      }
+    },
+    {
+      "id": "a1b2c3d4-5555-4000-8000-000000000005",
+      "classification": {
+        "type": "bug",
+        "confidence": 0.87,
+        "services": ["search-service", "indexer-worker", "index-api"],
+        "summary": "Search indexer crashing with OOM on large tenants"
+      }
+    }
+  ],
+  "people_graph": {
+    "nodes": [
+      {
+        "id": "person-001",
+        "label": "Alice Chen",
+        "identities": [
+          {"source": "jira", "source_id": "jira-user-001", "email": "alice.chen@company.com", "display_name": "Alice Chen"},
+          {"source": "slack", "source_id": "U_ALICE", "email": "alice.chen@company.com", "display_name": "Alice Chen"}
+        ]
+      },
+      {
+        "id": "person-002",
+        "label": "Bob Martinez",
+        "identities": [
+          {"source": "jira", "source_id": "jira-user-002", "email": "bob.martinez@company.com", "display_name": "Bob Martinez"},
+          {"source": "slack", "source_id": "U_BOB", "email": null, "display_name": "Bob M"}
+        ]
+      },
+      {
+        "id": "person-003",
+        "label": "Carol Wang",
+        "identities": [
+          {"source": "jira", "source_id": "jira-user-003", "email": "carol.wang@company.com", "display_name": "Carol Wang"},
+          {"source": "slack", "source_id": "U_CAROL", "email": "carol.wang@company.com", "display_name": "Carol W"}
+        ]
+      },
+      {
+        "id": "person-004",
+        "label": "Diana Okafor",
+        "identities": [
+          {"source": "jira", "source_id": "jira-user-004", "email": "diana.okafor@company.com", "display_name": "Diana Okafor"}
+        ]
+      },
+      {
+        "id": "person-005",
+        "label": "Eve Thompson",
+        "identities": [
+          {"source": "jira", "source_id": "jira-user-005", "email": "eve.thompson@company.com", "display_name": "Eve Thompson"}
+        ]
+      },
+      {
+        "id": "person-006",
+        "label": "Frank Kim",
+        "identities": [
+          {"source": "slack", "source_id": "U_FRANK", "email": "frank.kim@company.com", "display_name": "Frank Kim"}
+        ]
+      },
+      {
+        "id": "person-007",
+        "label": "Grace Liu",
+        "identities": [
+          {"source": "jira", "source_id": "jira-user-006", "email": "grace.liu@company.com", "display_name": "Grace Liu"},
+          {"source": "slack", "source_id": "U_GRACE", "email": null, "display_name": "Grace L"}
+        ]
+      },
+      {
+        "id": "person-008",
+        "label": "Henry Park",
+        "identities": [
+          {"source": "slack", "source_id": "U_HENRY", "email": "henry.park@company.com", "display_name": "Henry Park"}
+        ]
+      }
+    ],
+    "edges": [
+      {"from": "person-001", "to": "a1b2c3d4-1111-4000-8000-000000000001", "role": "reporter"},
+      {"from": "person-002", "to": "a1b2c3d4-1111-4000-8000-000000000001", "role": "assignee"},
+      {"from": "person-003", "to": "a1b2c3d4-1111-4000-8000-000000000001", "role": "commenter"},
+      {"from": "person-004", "to": "a1b2c3d4-2222-4000-8000-000000000002", "role": "reporter"},
+      {"from": "person-005", "to": "a1b2c3d4-2222-4000-8000-000000000002", "role": "commenter"},
+      {"from": "person-006", "to": "a1b2c3d4-3333-4000-8000-000000000003", "role": "reporter"},
+      {"from": "person-001", "to": "a1b2c3d4-3333-4000-8000-000000000003", "role": "participant"},
+      {"from": "person-007", "to": "a1b2c3d4-4444-4000-8000-000000000004", "role": "reporter"},
+      {"from": "person-002", "to": "a1b2c3d4-4444-4000-8000-000000000004", "role": "commenter"},
+      {"from": "person-008", "to": "a1b2c3d4-4444-4000-8000-000000000004", "role": "participant"},
+      {"from": "person-002", "to": "a1b2c3d4-5555-4000-8000-000000000005", "role": "reporter"},
+      {"from": "person-003", "to": "a1b2c3d4-5555-4000-8000-000000000005", "role": "assignee"},
+      {"from": "person-004", "to": "a1b2c3d4-5555-4000-8000-000000000005", "role": "commenter"}
+    ]
+  },
+  "service_graph": {
+    "nodes": [
+      {"id": "auth-service", "ticket_count": 1},
+      {"id": "api-gateway", "ticket_count": 1},
+      {"id": "user-db", "ticket_count": 1},
+      {"id": "reporting-service", "ticket_count": 1},
+      {"id": "export-api", "ticket_count": 1},
+      {"id": "billing-service", "ticket_count": 1},
+      {"id": "payment-worker", "ticket_count": 1},
+      {"id": "search-service", "ticket_count": 1},
+      {"id": "indexer-worker", "ticket_count": 1},
+      {"id": "index-api", "ticket_count": 1}
+    ],
+    "edges": [
+      {"from": "auth-service", "to": "api-gateway", "co_occurrence": 1},
+      {"from": "auth-service", "to": "user-db", "co_occurrence": 1},
+      {"from": "api-gateway", "to": "user-db", "co_occurrence": 1},
+      {"from": "reporting-service", "to": "export-api", "co_occurrence": 1},
+      {"from": "billing-service", "to": "payment-worker", "co_occurrence": 1},
+      {"from": "search-service", "to": "indexer-worker", "co_occurrence": 1},
+      {"from": "search-service", "to": "index-api", "co_occurrence": 1},
+      {"from": "indexer-worker", "to": "index-api", "co_occurrence": 1}
+    ]
+  },
+  "metadata": {
+    "analyzed_at": "2026-01-28T20:30:00Z",
+    "classifier": "rule_based_v1"
+  }
+}

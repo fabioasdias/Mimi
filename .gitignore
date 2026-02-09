@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+
+# Environment & config (contains secrets)
+.env
+.env.local
+sources.yaml
+
+# Data (except samples)
+data/gathered.json
+data/analyzed.json
+
+# Node
+node_modules/
+.astro/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+
+# OS
+.DS_Store
+gather/.coverage

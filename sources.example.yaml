@@ -1,0 +1,38 @@
+output: data/gathered.json
+
+sources:
+  # Each source has a unique name, a type, auth credentials, and filters.
+  # Filters are passed directly to the source's API — use whatever fields
+  # that API supports.
+
+  company-jira:
+    type: jira
+    auth:
+      base_url: https://company.atlassian.net
+      email: you@company.com
+      api_token: ${JIRA_API_TOKEN}
+    filters:
+      jql: "project in (AUTH, PLAT, BILL) AND updated >= -30d"
+
+  support-slack:
+    type: slack
+    auth:
+      bot_token: ${SLACK_BOT_TOKEN}
+    filters:
+      channels:
+        - C_SUPPORT
+        - C_BILLING
+      oldest_days: 30  # only fetch threads from last N days
+
+  platform-github:
+    type: github
+    auth:
+      token: ${GITHUB_TOKEN}
+    filters:
+      repos:
+        - company/platform
+        - company/auth-service
+      labels:
+        - bug
+        - support
+      state: all  # open, closed, or all

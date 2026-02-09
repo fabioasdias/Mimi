@@ -1,0 +1,119 @@
+{
+  "tickets": [
+    {
+      "id": "a1b2c3d4-1111-4000-8000-000000000001",
+      "references": [
+        {"source": "jira", "id": "AUTH-1234", "url": "https://company.atlassian.net/browse/AUTH-1234"},
+        {"source": "slack", "id": "1706000001.000100", "meta": {"channel": "C_SUPPORT", "thread_ts": "1706000001.000100"}}
+      ],
+      "title": "Auth service returning 500 errors on login",
+      "status": "In Progress",
+      "created_at": "2026-01-23T09:15:00Z",
+      "updated_at": "2026-01-23T14:30:00Z",
+      "people": [
+        {"source": "jira", "source_id": "jira-user-001", "name": "Alice Chen", "email": "alice.chen@company.com", "role": "reporter"},
+        {"source": "jira", "source_id": "jira-user-002", "name": "Bob Martinez", "email": "bob.martinez@company.com", "role": "assignee"},
+        {"source": "slack", "source_id": "U_ALICE", "name": "Alice Chen", "email": "alice.chen@company.com", "role": "reporter"},
+        {"source": "slack", "source_id": "U_BOB", "name": "Bob M", "email": null, "role": "participant"},
+        {"source": "jira", "source_id": "jira-user-003", "name": "Carol Wang", "email": "carol.wang@company.com", "role": "commenter"}
+      ],
+      "conversation": [
+        {"source": "slack", "author": "Alice Chen", "author_source_id": "U_ALICE", "timestamp": "2026-01-23T09:15:00Z", "content": "Hey, anyone else seeing 500s on the login page? Started about 10 min ago. Looks like auth-service is down. See AUTH-1234"},
+        {"source": "slack", "author": "Bob M", "author_source_id": "U_BOB", "timestamp": "2026-01-23T09:17:00Z", "content": "Yeah, confirming. Seeing it on the api-gateway too. Checking logs now."},
+        {"source": "jira", "author": "Alice Chen", "author_source_id": "jira-user-001", "timestamp": "2026-01-23T09:20:00Z", "content": "Login endpoint returns HTTP 500. Traced to auth-service failing to connect to user-db. Started at approximately 09:05 UTC."},
+        {"source": "jira", "author": "Bob Martinez", "author_source_id": "jira-user-002", "timestamp": "2026-01-23T10:00:00Z", "content": "Root cause: connection pool exhaustion on user-db. Scaled up the pool and restarted auth-service. Monitoring now."},
+        {"source": "jira", "author": "Carol Wang", "author_source_id": "jira-user-003", "timestamp": "2026-01-23T14:30:00Z", "content": "Confirmed stable for 4 hours. Adding alerting for connection pool usage on user-db."},
+        {"source": "slack", "author": "Bob M", "author_source_id": "U_BOB", "timestamp": "2026-01-23T14:35:00Z", "content": "All clear now. Fixed in AUTH-1234. Added monitoring for the db pool."}
+      ]
+    },
+    {
+      "id": "a1b2c3d4-2222-4000-8000-000000000002",
+      "references": [
+        {"source": "jira", "id": "PLAT-5678", "url": "https://company.atlassian.net/browse/PLAT-5678"}
+      ],
+      "title": "Feature request: Add bulk export to CSV for reports",
+      "status": "Open",
+      "created_at": "2026-01-20T11:00:00Z",
+      "updated_at": "2026-01-22T16:45:00Z",
+      "people": [
+        {"source": "jira", "source_id": "jira-user-004", "name": "Diana Okafor", "email": "diana.okafor@company.com", "role": "reporter"},
+        {"source": "jira", "source_id": "jira-user-005", "name": "Eve Thompson", "email": "eve.thompson@company.com", "role": "commenter"}
+      ],
+      "conversation": [
+        {"source": "jira", "author": "Diana Okafor", "author_source_id": "jira-user-004", "timestamp": "2026-01-20T11:00:00Z", "content": "We need the ability to export report data as CSV in bulk. Currently we can only export one report at a time which is very slow for our analytics team. This is a feature request for the reporting-service."},
+        {"source": "jira", "author": "Eve Thompson", "author_source_id": "jira-user-005", "timestamp": "2026-01-22T16:45:00Z", "content": "This would be a great enhancement. We should also consider adding it to the export-api so third party integrations can use it. Adding to the roadmap for Q2."}
+      ]
+    },
+    {
+      "id": "a1b2c3d4-3333-4000-8000-000000000003",
+      "references": [
+        {"source": "slack", "id": "1706100001.000200", "meta": {"channel": "C_SUPPORT", "thread_ts": "1706100001.000200"}}
+      ],
+      "title": "How do I reset my 2FA? Can't find the option in settings",
+      "status": "open",
+      "created_at": "2026-01-24T08:30:00Z",
+      "updated_at": "2026-01-24T09:15:00Z",
+      "people": [
+        {"source": "slack", "source_id": "U_FRANK", "name": "Frank Kim", "email": "frank.kim@company.com", "role": "reporter"},
+        {"source": "slack", "source_id": "U_ALICE", "name": "Alice Chen", "email": "alice.chen@company.com", "role": "participant"}
+      ],
+      "conversation": [
+        {"source": "slack", "author": "Frank Kim", "author_source_id": "U_FRANK", "timestamp": "2026-01-24T08:30:00Z", "content": "Help me please — how do I reset my 2FA? I got a new phone and can't find where to reset it in the settings page."},
+        {"source": "slack", "author": "Alice Chen", "author_source_id": "U_ALICE", "timestamp": "2026-01-24T08:45:00Z", "content": "Go to Settings > Security > Two-Factor Authentication > Reset. There's a documentation page here: https://docs.company.com/2fa-reset"},
+        {"source": "slack", "author": "Frank Kim", "author_source_id": "U_FRANK", "timestamp": "2026-01-24T09:15:00Z", "content": "Found it, thanks! The option was hidden under the advanced section. Maybe we could make it more visible?"}
+      ]
+    },
+    {
+      "id": "a1b2c3d4-4444-4000-8000-000000000004",
+      "references": [
+        {"source": "jira", "id": "BILL-9012", "url": "https://company.atlassian.net/browse/BILL-9012"},
+        {"source": "slack", "id": "1706200001.000300", "meta": {"channel": "C_BILLING", "thread_ts": "1706200001.000300"}}
+      ],
+      "title": "Billing discrepancy: customer charged twice for subscription",
+      "status": "Open",
+      "created_at": "2026-01-25T13:00:00Z",
+      "updated_at": "2026-01-26T10:00:00Z",
+      "people": [
+        {"source": "jira", "source_id": "jira-user-006", "name": "Grace Liu", "email": "grace.liu@company.com", "role": "reporter"},
+        {"source": "slack", "source_id": "U_GRACE", "name": "Grace L", "email": null, "role": "reporter"},
+        {"source": "jira", "source_id": "jira-user-002", "name": "Bob Martinez", "email": "bob.martinez@company.com", "role": "commenter"},
+        {"source": "slack", "source_id": "U_HENRY", "name": "Henry Park", "email": "henry.park@company.com", "role": "participant"}
+      ],
+      "conversation": [
+        {"source": "slack", "author": "Grace L", "author_source_id": "U_GRACE", "timestamp": "2026-01-25T13:00:00Z", "content": "Customer Acme Corp was charged twice for their monthly subscription. See BILL-9012. This is wrong team — should go to billing team, not platform."},
+        {"source": "jira", "author": "Grace Liu", "author_source_id": "jira-user-006", "timestamp": "2026-01-25T13:10:00Z", "content": "Double charge detected for customer ID 78901. The billing-service processed two payment events for the same invoice. Possibly a race condition in the payment-worker."},
+        {"source": "jira", "author": "Bob Martinez", "author_source_id": "jira-user-002", "timestamp": "2026-01-25T15:30:00Z", "content": "Reassigning to billing team. This is a known issue with the payment-worker idempotency. Not a platform bug."},
+        {"source": "slack", "author": "Henry Park", "author_source_id": "U_HENRY", "timestamp": "2026-01-26T10:00:00Z", "content": "Refund processed for Acme Corp. We need to fix the idempotency key generation in payment-worker. Tracking in BILL-9012."}
+      ]
+    },
+    {
+      "id": "a1b2c3d4-5555-4000-8000-000000000005",
+      "references": [
+        {"source": "jira", "id": "PLAT-9999", "url": "https://company.atlassian.net/browse/PLAT-9999"},
+        {"source": "slack", "id": "1706300001.000400", "meta": {"channel": "C_SUPPORT", "thread_ts": "1706300001.000400"}}
+      ],
+      "title": "Search indexer crashing with OOM on large tenants",
+      "status": "In Progress",
+      "created_at": "2026-01-27T07:00:00Z",
+      "updated_at": "2026-01-28T18:00:00Z",
+      "people": [
+        {"source": "jira", "source_id": "jira-user-002", "name": "Bob Martinez", "email": "bob.martinez@company.com", "role": "reporter"},
+        {"source": "jira", "source_id": "jira-user-003", "name": "Carol Wang", "email": "carol.wang@company.com", "role": "assignee"},
+        {"source": "slack", "source_id": "U_BOB", "name": "Bob M", "email": null, "role": "reporter"},
+        {"source": "slack", "source_id": "U_CAROL", "name": "Carol W", "email": "carol.wang@company.com", "role": "participant"},
+        {"source": "jira", "source_id": "jira-user-004", "name": "Diana Okafor", "email": "diana.okafor@company.com", "role": "commenter"}
+      ],
+      "conversation": [
+        {"source": "slack", "author": "Bob M", "author_source_id": "U_BOB", "timestamp": "2026-01-27T07:00:00Z", "content": "The search-service indexer is crashing with OOM errors for tenants with >1M documents. search-service pod keeps getting killed. PLAT-9999"},
+        {"source": "jira", "author": "Bob Martinez", "author_source_id": "jira-user-002", "timestamp": "2026-01-27T07:15:00Z", "content": "search-service indexer OOM on large tenants. Stack trace shows unbounded batch size in the indexer-worker. Need to implement pagination for the index-api."},
+        {"source": "jira", "author": "Carol Wang", "author_source_id": "jira-user-003", "timestamp": "2026-01-27T11:00:00Z", "content": "Confirmed the issue. The indexer-worker loads the entire document set into memory. Implementing chunked processing with 10k doc batches."},
+        {"source": "slack", "author": "Carol W", "author_source_id": "U_CAROL", "timestamp": "2026-01-28T09:00:00Z", "content": "PR up for the chunked indexer. Also adding memory limits to the search-service deployment."},
+        {"source": "jira", "author": "Diana Okafor", "author_source_id": "jira-user-004", "timestamp": "2026-01-28T18:00:00Z", "content": "Tested with our largest tenant (2.3M docs). Indexing completes successfully with peak memory under 2GB. Bug is fixed."}
+      ]
+    }
+  ],
+  "metadata": {
+    "gathered_at": "2026-01-28T20:00:00Z",
+    "sources": ["jira", "slack"]
+  }
+}
