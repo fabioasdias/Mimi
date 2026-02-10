@@ -77,7 +77,8 @@ def extract_linguistic_features(nlp: Language, text: str) -> LinguisticFeatures:
     for ent in doc.ents:
         if ent.label_ not in entities:
             entities[ent.label_] = []
-        entities[ent.label_].append(ent.text.lower())
+        # Preserve original case for entity names (important for filtering)
+        entities[ent.label_].append(ent.text)
 
     return LinguisticFeatures(
         has_modal=has_modal,
@@ -155,22 +156,60 @@ def classify_by_linguistic_features(
 
 
 def extract_services_and_products(features: LinguisticFeatures) -> list[str]:
-    """Extract service and product names from linguistic features."""
+    """Extract service and product names using spaCy NER.
+
+    Relies on spaCy's trained model to identify ORG and PRODUCT entities,
+    then filters out obvious non-services (code snippets, fragments, etc.).
+    """
     services: set[str] = set()
 
-    # ORG and PRODUCT entities are likely services
+    # Collect ORG and PRODUCT entities from spaCy NER
     for ent_type in ("ORG", "PRODUCT"):
         if ent_type in features.entities:
             services.update(features.entities[ent_type])
 
-    # Extract noun chunks that might be services (from subjects/objects)
-    # Filter out common words
-    stopwords = {"service", "api", "feature", "user", "issue", "problem", "error"}
-    for noun in features.subjects + features.objects:
-        if noun not in stopwords and len(noun) > 2:
-            services.add(noun)
+    # Filter out obvious garbage that spaCy incorrectly tagged
+    filtered = set()
+    for service in services:
 
-    return sorted(services)[:10]  # Limit to top 10
+        # Skip if contains newlines, tabs, or other control characters
+        if any(ord(c) < 32 for c in service if c != ' '):
+            continue
+
+        # Skip if contains code-like characters
+        code_chars = ["(", ")", "{", "}", "[", "]", "<", ">", ".", "/", "\\", "&", "+", "*", "="]
+        if any(char in service for char in code_chars):
+            continue
+
+        # Skip if contains URL fragments
+        if "http" in service.lower() or "://" in service:
+            continue
+
+        # Skip if starts/ends with quotes or special punctuation
+        if service and (service[0] in ["'", '"', "`", "#"] or service[-1] in ["'", '"', "`"]):
+            continue
+
+        # Skip if it's mostly non-alphabetic (code/variables tend to have numbers/symbols)
+        alpha_count = sum(c.isalpha() or c.isspace() for c in service)
+        if len(service) > 0 and alpha_count / len(service) < 0.75:
+            continue
+
+        # Skip obvious variable names (all lowercase single word)
+        if " " not in service and service.islower():
+            continue
+
+        # Skip camelCase variable names (has lowercase then uppercase in middle)
+        if " " not in service and len(service) > 1:
+            has_camel = any(
+                service[i].islower() and service[i + 1].isupper()
+                for i in range(len(service) - 1)
+            )
+            if has_camel:
+                continue
+
+        filtered.add(service)
+
+    return sorted(filtered)[:10]
 
 
 def classify_issue(
