@@ -1,17 +1,296 @@
 ---
-
+// No server-side data loading - everything loads on-demand via client-side button click
 ---
 
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Support Issues Dashboard</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f9fafb;
+        color: #111827;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      header {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #111827;
+      }
+
+      .load-btn {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .load-btn:hover {
+        background: #4338ca;
+      }
+
+      .load-btn:active {
+        background: #3730a3;
+      }
+
+      .load-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      #dashboard-content {
+        display: none;
+      }
+
+      #dashboard-content.loaded {
+        display: block;
+      }
+
+      .meta {
+        color: #6b7280;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .stat-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #4f46e5;
+        margin-bottom: 5px;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .charts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      .chart-card {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .chart-card.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+      }
+
+      @media (max-width: 1024px) {
+        .charts {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Support Issues Dashboard</h1>
+        <input type="file" id="fileInput" accept=".json" style="display: none;" />
+        <button class="load-btn" id="loadBtn">Choose analyzed.json</button>
+        <div id="error" class="error" style="display: none;"></div>
+      </header>
+
+      <div id="dashboard-content">
+        <p class="meta">
+          Analyzed <span id="totalIssues">0</span> issues | Last updated: <span id="lastUpdated">-</span>
+        </p>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotalIssues">0</div>
+            <div class="stat-label">Total Issues</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTotalServices">0</div>
+            <div class="stat-label">Services</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTopCount">0</div>
+            <div class="stat-label" id="statTopLabel">Top: N/A</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statQuestions">0</div>
+            <div class="stat-label">Questions</div>
+          </div>
+        </div>
+
+        <div class="charts">
+          <div class="chart-card">
+            <div id="serviceVolumeChart"></div>
+          </div>
+          <div class="chart-card">
+            <div id="classificationBreakdown"></div>
+          </div>
+          <div class="chart-card full-width">
+            <div id="documentationGaps"></div>
+          </div>
+          <div class="chart-card full-width">
+            <div id="peopleActivity"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { mount } from 'svelte';
+
+      const loadBtn = document.getElementById('loadBtn') as HTMLButtonElement;
+      const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+      const errorDiv = document.getElementById('error') as HTMLDivElement;
+      const dashboardContent = document.getElementById('dashboard-content') as HTMLDivElement;
+
+      // Trigger file picker when button is clicked
+      loadBtn?.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      // Handle file selection
+      fileInput?.addEventListener('change', async (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        try {
+          loadBtn.disabled = true;
+          loadBtn.textContent = 'Loading...';
+          errorDiv.style.display = 'none';
+
+          // Read the file content
+          const fileContent = await file.text();
+          const analyzed = JSON.parse(fileContent) as any;
+
+          // Update stats
+          const totalIssues = analyzed.issues.length;
+          const totalServices = analyzed.service_graph.nodes.length;
+          const classificationCounts = analyzed.issues.reduce((acc: any, issue: any) => {
+            acc[issue.classification.type] = (acc[issue.classification.type] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          const topClassification = Object.entries(classificationCounts)
+            .sort(([,a], [,b]) => (b as number) - (a as number))[0];
+
+          document.getElementById('totalIssues')!.textContent = String(totalIssues);
+          document.getElementById('lastUpdated')!.textContent = new Date(analyzed.metadata.analyzed_at).toLocaleString();
+          document.getElementById('statTotalIssues')!.textContent = String(totalIssues);
+          document.getElementById('statTotalServices')!.textContent = String(totalServices);
+          document.getElementById('statTopCount')!.textContent = topClassification ? String(topClassification[1]) : '0';
+          document.getElementById('statTopLabel')!.textContent = `Top: ${topClassification ? topClassification[0] : 'N/A'}`;
+          document.getElementById('statQuestions')!.textContent = String(classificationCounts.question || 0);
+
+          // Dynamically import and mount components
+          const [
+            { default: ServiceVolumeChart },
+            { default: ClassificationBreakdown },
+            { default: DocumentationGaps },
+            { default: PeopleActivity }
+          ] = await Promise.all([
+            import('../components/ServiceVolumeChart.svelte'),
+            import('../components/ClassificationBreakdown.svelte'),
+            import('../components/DocumentationGaps.svelte'),
+            import('../components/PeopleActivity.svelte')
+          ]);
+
+          // Render charts
+          mount(ServiceVolumeChart, {
+            target: document.getElementById('serviceVolumeChart')!,
+            props: { serviceGraph: analyzed.service_graph }
+          });
+
+          mount(ClassificationBreakdown, {
+            target: document.getElementById('classificationBreakdown')!,
+            props: { issues: analyzed.issues }
+          });
+
+          mount(DocumentationGaps, {
+            target: document.getElementById('documentationGaps')!,
+            props: { issues: analyzed.issues }
+          });
+
+          mount(PeopleActivity, {
+            target: document.getElementById('peopleActivity')!,
+            props: {
+              issues: analyzed.issues,
+              peopleGraph: analyzed.people_graph
+            }
+          });
+
+          // Show dashboard
+          dashboardContent.classList.add('loaded');
+          loadBtn.textContent = 'Refresh Data';
+          loadBtn.disabled = false;
+
+        } catch (error) {
+          console.error('Error loading data:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          errorDiv.textContent = `Error: ${errorMessage}. Make sure you've run the gather and analyze scripts.`;
+          errorDiv.style.display = 'block';
+          loadBtn.textContent = 'Try Again';
+          loadBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
 </html>

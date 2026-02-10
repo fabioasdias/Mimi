@@ -14,11 +14,22 @@ class Classification(BaseModel):
     summary: str
 
 
+class IssuePerson(BaseModel):
+    """A person associated with an issue."""
+
+    source: str
+    source_id: str
+    name: str
+    email: str | None = None
+    role: str  # reporter, assignee, commenter
+
+
 class IssueAnalysis(BaseModel):
     """Analysis result for a single issue."""
 
     id: str  # matches gather output
     classification: Classification
+    people: list[IssuePerson] = []
 
 
 class Identity(BaseModel):

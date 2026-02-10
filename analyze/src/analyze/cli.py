@@ -7,7 +7,7 @@ import click
 
 from analyze.classifier import classify_issue
 from analyze.entities import extract_services, extract_services_spacy, load_nlp
-from analyze.models import AnalysisMetadata, AnalyzedData, IssueAnalysis
+from analyze.models import AnalysisMetadata, AnalyzedData, IssueAnalysis, IssuePerson
 from analyze.people import build_service_graph, resolve_identities
 from analyze.suggest import suggest_rules
 
@@ -78,10 +78,23 @@ def main(
         all_services = sorted(set(classification.services) | set(found_services))
         classification.services = all_services
 
+        # Extract people data from the issue
+        people = [
+            IssuePerson(
+                source=person.get("source", ""),
+                source_id=person.get("source_id", ""),
+                name=person.get("name", ""),
+                email=person.get("email"),
+                role=person.get("role", ""),
+            )
+            for person in issue.get("people", [])
+        ]
+
         analyses.append(
             IssueAnalysis(
                 id=issue["id"],
                 classification=classification,
+                people=people,
             )
         )
 
