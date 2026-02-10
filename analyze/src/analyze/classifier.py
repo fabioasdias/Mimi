@@ -1,158 +1,207 @@
-"""Rule-based ticket classifier.
+"""NLP-based issue classifier using spaCy linguistic features.
 
-Bootstrap implementation using keyword patterns.
-Can be replaced with a trained spaCy TextCategorizer later.
+Uses dependency parsing, POS tags, and sentence structure to understand
+what's being discussed and classify based on linguistic patterns.
 """
 
-import re
+from collections import Counter
+from dataclasses import dataclass
+from pathlib import Path
 
+from ruamel.yaml import YAML
+from spacy.language import Language
+
+from analyze.entities import load_nlp
 from analyze.models import Classification
 
-# Category patterns: (category, keywords/phrases, weight)
-RULES: list[tuple[str, list[str], float]] = [
-    (
-        "outage",
-        [
-            "down",
-            "outage",
-            "unavailable",
-            "500",
-            "503",
-            "timeout",
-            "not responding",
-            "can't access",
-            "cannot access",
-            "service is down",
-            "incident",
-            "degraded",
-            "p1",
-            "p0",
-            "sev1",
-            "sev0",
-            "emergency",
-        ],
-        1.0,
-    ),
-    (
-        "bug",
-        [
-            "bug",
-            "error",
-            "crash",
-            "broken",
-            "doesn't work",
-            "does not work",
-            "unexpected",
-            "regression",
-            "defect",
-            "issue",
-            "failing",
-            "failed",
-            "exception",
-            "stacktrace",
-            "stack trace",
-        ],
-        0.8,
-    ),
-    (
-        "new_feature",
-        [
-            "feature request",
-            "new feature",
-            "enhancement",
-            "would be nice",
-            "could we add",
-            "can we add",
-            "requesting",
-            "proposal",
-            "rfc",
-            "roadmap",
-            "improvement",
-        ],
-        0.9,
-    ),
-    (
-        "user_error",
-        [
-            "how do i",
-            "how to",
-            "help me",
-            "confused",
-            "don't understand",
-            "where is",
-            "can't find",
-            "documentation",
-            "what does",
-            "is it possible",
-            "tutorial",
-        ],
-        0.7,
-    ),
-    (
-        "wrong_team",
-        [
-            "wrong team",
-            "not our",
-            "not my team",
-            "redirect",
-            "reassign",
-            "belongs to",
-            "should go to",
-            "moved to",
-            "transferred",
-            "not responsible",
-        ],
-        0.9,
-    ),
-    (
-        "question",
-        [
-            "question",
-            "asking",
-            "clarification",
-            "wondering",
-            "anyone know",
-            "does anyone",
-            "quick question",
-        ],
-        0.6,
-    ),
-]
 
-# Pre-compile patterns
-_COMPILED_RULES = [
-    (
-        category,
-        [re.compile(rf"\b{re.escape(kw)}\b", re.IGNORECASE) for kw in keywords],
-        weight,
+@dataclass
+class LinguisticFeatures:
+    """Linguistic features extracted from text."""
+
+    has_modal: bool  # would, could, should
+    has_negation: bool  # not, n't, no
+    has_question: bool  # ends with ?, wh-words
+    has_imperative: bool  # command form
+    all_lemmas: list[str]  # All lemmas (for keyword matching)
+    verb_lemmas: list[str]  # All verb lemmas
+    root_verbs: list[str]  # Root verbs of sentences
+    subjects: list[str]  # Subject nouns
+    objects: list[str]  # Object nouns
+    entities: dict[str, list[str]]  # Entity type -> entity texts
+
+
+def extract_linguistic_features(nlp: Language, text: str) -> LinguisticFeatures:
+    """Extract linguistic features using spaCy dependency parsing."""
+    doc = nlp(text)
+
+    # Detect modals
+    has_modal = any(token.tag_ == "MD" for token in doc)
+
+    # Detect negation
+    has_negation = any(token.dep_ == "neg" for token in doc)
+
+    # Detect questions by punctuation
+    has_question = "?" in text
+
+    # Extract all lemmas (excluding punctuation and whitespace)
+    all_lemmas = [
+        token.lemma_.lower()
+        for token in doc
+        if not token.is_punct and not token.is_space
+    ]
+
+    # Extract verbs
+    verb_lemmas = [
+        token.lemma_.lower() for token in doc if token.pos_ in ("VERB", "AUX")
+    ]
+
+    # Extract root verbs (main action of each sentence)
+    root_verbs = [
+        sent.root.lemma_.lower()
+        for sent in doc.sents
+        if sent.root.pos_ in ("VERB", "AUX")
+    ]
+
+    # Extract subjects and objects using dependency relations
+    subjects = []
+    objects = []
+    for token in doc:
+        if token.dep_ in ("nsubj", "nsubjpass"):
+            subjects.append(token.lemma_.lower())
+        elif token.dep_ in ("dobj", "pobj", "attr"):
+            objects.append(token.lemma_.lower())
+
+    # Extract entities by type
+    entities: dict[str, list[str]] = {}
+    for ent in doc.ents:
+        if ent.label_ not in entities:
+            entities[ent.label_] = []
+        entities[ent.label_].append(ent.text.lower())
+
+    return LinguisticFeatures(
+        has_modal=has_modal,
+        has_negation=has_negation,
+        has_question=has_question,
+        has_imperative=False,  # TODO: detect imperatives
+        all_lemmas=all_lemmas,
+        verb_lemmas=verb_lemmas,
+        root_verbs=root_verbs,
+        subjects=subjects,
+        objects=objects,
+        entities=entities,
     )
-    for category, keywords, weight in RULES
-]
 
 
-def classify_ticket(title: str, conversation_text: str) -> Classification:
-    """Classify a ticket based on its title and conversation content.
+def load_semantic_rules(rules_path: Path | None = None) -> dict:
+    """Load semantic classification rules from YAML."""
+    if rules_path is None:
+        rules_path = Path(__file__).parent.parent.parent / "classify_rules.yaml"
 
-    Returns the best-matching classification with confidence score.
+    yaml_loader = YAML(typ="safe")
+    with open(rules_path) as f:
+        return yaml_loader.load(f)
+
+
+def classify_by_linguistic_features(
+    features: LinguisticFeatures, rules: dict, text: str
+) -> dict[str, float]:
+    """Classify based on linguistic features and learned rules."""
+    scores: dict[str, float] = {
+        "outage": 0.0,
+        "bug": 0.0,
+        "new_feature": 0.0,
+        "user_error": 0.0,
+        "question": 0.0,
+        "wrong_team": 0.0,
+    }
+
+    text_lower = text.lower()
+
+    # Load keyword patterns from rules (for bootstrapping)
+    for category, config in rules.items():
+        if category not in scores:
+            continue
+
+        keywords = config.get("keywords", [])
+        weight = config.get("weight", 1.0)
+
+        for keyword in keywords:
+            kw_lower = keyword.lower()
+            # Check multi-word phrases in original text
+            if " " in kw_lower:
+                if kw_lower in text_lower:
+                    scores[category] += weight
+            else:
+                # Check single-word keywords against lemmas
+                kw_normalized = kw_lower.replace(" ", "_")
+                if kw_normalized in features.all_lemmas:
+                    scores[category] += weight
+
+    # Boost feature requests if modal present (only if no strong matches elsewhere)
+    if features.has_modal and max(scores.values()) < 2.0:
+        scores["new_feature"] += 1.5
+
+    # Boost questions if question markers present
+    if features.has_question:
+        scores["question"] += 1.5
+        scores["user_error"] += 1.0
+
+    # Negation + action verbs often indicate bugs (only if no strong wrong_team signal)
+    if features.has_negation and features.verb_lemmas and scores["wrong_team"] < 1.0:
+        scores["bug"] += 1.0
+
+    return scores
+
+
+def extract_services_and_products(features: LinguisticFeatures) -> list[str]:
+    """Extract service and product names from linguistic features."""
+    services: set[str] = set()
+
+    # ORG and PRODUCT entities are likely services
+    for ent_type in ("ORG", "PRODUCT"):
+        if ent_type in features.entities:
+            services.update(features.entities[ent_type])
+
+    # Extract noun chunks that might be services (from subjects/objects)
+    # Filter out common words
+    stopwords = {"service", "api", "feature", "user", "issue", "problem", "error"}
+    for noun in features.subjects + features.objects:
+        if noun not in stopwords and len(noun) > 2:
+            services.add(noun)
+
+    return sorted(services)[:10]  # Limit to top 10
+
+
+def classify_issue(
+    title: str,
+    conversation_text: str,
+    nlp: Language | None = None,
+) -> Classification:
+    """Classify an issue using NLP linguistic features.
+
+    Args:
+        title: Issue title
+        conversation_text: Full conversation content
+        nlp: Optional spaCy model (will load if not provided)
+
+    Returns:
+        Classification with type, confidence, and extracted services
     """
+    if nlp is None:
+        nlp = load_nlp()
+
     full_text = f"{title}\n{conversation_text}"
 
-    scores: dict[str, float] = {}
-    match_details: dict[str, list[str]] = {}
+    # Extract linguistic features
+    features = extract_linguistic_features(nlp, full_text)
 
-    for category, patterns, weight in _COMPILED_RULES:
-        matches = []
-        for pattern in patterns:
-            found = pattern.findall(full_text)
-            if found:
-                matches.extend(found)
+    # Load rules and classify
+    rules = load_semantic_rules()
+    scores = classify_by_linguistic_features(features, rules, full_text)
 
-        if matches:
-            # Score based on number of matching keywords, weighted
-            scores[category] = len(matches) * weight
-            match_details[category] = matches
-
-    if not scores:
+    # If no clear pattern, default to question with low confidence
+    if max(scores.values()) == 0:
         return Classification(
             type="question",
             confidence=0.3,
@@ -160,14 +209,17 @@ def classify_ticket(title: str, conversation_text: str) -> Classification:
             summary=title[:200],
         )
 
-    # Normalize scores
-    total = sum(scores.values())
-    best_category = max(scores, key=scores.get)  # type: ignore[arg-type]
-    confidence = min(scores[best_category] / total, 0.99) if total > 0 else 0.5
+    # Find best category
+    best_category = max(scores, key=lambda k: scores[k])
+    total_score = sum(scores.values())
+    confidence = min(scores[best_category] / total_score, 0.99)
+
+    # Extract services
+    services = extract_services_and_products(features)
 
     return Classification(
         type=best_category,
         confidence=round(confidence, 2),
-        services=[],  # Filled by entities module
+        services=services,
         summary=title[:200],
     )

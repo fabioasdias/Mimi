@@ -9,6 +9,7 @@ dependencies = [
     "rapidfuzz>=3.0",
     "pydantic>=2.0",
     "click>=8.0",
+    "ruamel.yaml>=0.18",
 ]
 
 [project.optional-dependencies]
@@ -19,6 +20,7 @@ dev = [
 
 [project.scripts]
 analyze = "analyze.cli:main"
+analyze-suggest = "analyze.cli:suggest"
 
 [build-system]
 requires = ["hatchling"]

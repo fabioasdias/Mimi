@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class Classification(BaseModel):
-    """Ticket classification result."""
+    """Issue classification result."""
 
     type: str  # outage, new_feature, user_error, wrong_team, bug, question
     confidence: float = Field(ge=0.0, le=1.0)
@@ -39,7 +39,7 @@ class PersonNode(BaseModel):
 
 
 class GraphEdge(BaseModel):
-    """An edge in the graph (person↔ticket or person↔person)."""
+    """An edge in the graph (person↔issue or person↔person)."""
 
     source: str = Field(alias="from")
     target: str = Field(alias="to")
@@ -51,7 +51,7 @@ class GraphEdge(BaseModel):
 
 
 class PeopleGraph(BaseModel):
-    """Graph of people and their relationships to tickets."""
+    """Graph of people and their relationships to issues."""
 
     nodes: list[PersonNode]
     edges: list[GraphEdge]
@@ -61,7 +61,7 @@ class ServiceNode(BaseModel):
     """A service/component node."""
 
     id: str
-    ticket_count: int = 0
+    issue_count: int = 0
 
 
 class ServiceEdge(BaseModel):

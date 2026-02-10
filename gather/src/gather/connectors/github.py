@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import httpx
 
 from gather.config import SourceConfig
-from gather.connectors.base import BaseConnector, RawTicket
+from gather.connectors.base import BaseConnector, RawIssue
 from gather.models import Message, Person, SourceReference
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class GitHubConnector(BaseConnector):
             },
         )
 
-    async def fetch_tickets(self) -> list[RawTicket]:
+    async def fetch_issues(self) -> list[RawIssue]:
         repos = self.filters.get("repos", [])
         labels = self.filters.get("labels", [])
         state = self.filters.get("state", "all")
@@ -46,7 +46,7 @@ class GitHubConnector(BaseConnector):
             since = datetime.now() - timedelta(days=int(since_days))
             logger.debug("Filtering to last %s days (since %s)", since_days, since.isoformat())
 
-        tickets: list[RawTicket] = []
+        issues: list[RawIssue] = []
 
         for repo in repos:
             logger.info("Fetching issues from %s (state=%s)", repo, state)
@@ -68,27 +68,27 @@ class GitHubConnector(BaseConnector):
                     f"/repos/{repo}/issues", params=params
                 )
                 resp.raise_for_status()
-                issues = resp.json()
+                page_issues = resp.json()
 
-                if not issues:
+                if not page_issues:
                     break
 
-                logger.debug("Page %d: %d items from %s", page, len(issues), repo)
+                logger.debug("Page %d: %d items from %s", page, len(page_issues), repo)
 
-                for issue in issues:
+                for issue_data in page_issues:
                     # Skip pull requests (GitHub includes them in /issues)
-                    if "pull_request" in issue:
+                    if "pull_request" in issue_data:
                         continue
-                    ticket = await self._parse_issue(repo, issue)
-                    tickets.append(ticket)
+                    parsed_issue = await self._parse_issue(repo, issue_data)
+                    issues.append(parsed_issue)
 
                 page += 1
 
-            logger.info("Fetched %d issues from %s", len(tickets), repo)
+            logger.info("Fetched %d issues from %s", len(issues), repo)
 
-        return tickets
+        return issues
 
-    async def _parse_issue(self, repo: str, issue: dict) -> RawTicket:
+    async def _parse_issue(self, repo: str, issue: dict) -> RawIssue:
         number = issue["number"]
 
         people: list[Person] = []
@@ -158,7 +158,7 @@ class GitHubConnector(BaseConnector):
         if issue.get("state_reason"):
             status = f"{status} ({issue['state_reason']})"
 
-        return RawTicket(
+        return RawIssue(
             reference=SourceReference(
                 source="github",
                 id=f"{repo}#{number}",

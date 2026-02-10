@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class SourceReference(BaseModel):
-    """A reference to a ticket in a specific source system."""
+    """A reference to an issue in a specific source system."""
 
     source: str
     id: str
@@ -20,7 +20,7 @@ class SourceReference(BaseModel):
 
 
 class Person(BaseModel):
-    """A person involved in a ticket, as seen from a specific source."""
+    """A person involved in an issue, as seen from a specific source."""
 
     source: str
     source_id: str
@@ -39,8 +39,8 @@ class Message(BaseModel):
     content: str
 
 
-class ConsolidatedTicket(BaseModel):
-    """A ticket consolidated from multiple sources."""
+class ConsolidatedIssue(BaseModel):
+    """An issue consolidated from multiple sources."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     references: list[SourceReference]
@@ -62,5 +62,5 @@ class GatherMetadata(BaseModel):
 class GatheredData(BaseModel):
     """Top-level output of the gather module."""
 
-    tickets: list[ConsolidatedTicket]
+    issues: list[ConsolidatedIssue]
     metadata: GatherMetadata

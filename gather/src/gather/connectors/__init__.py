@@ -1,4 +1,4 @@
-from gather.connectors.base import BaseConnector, RawTicket
+from gather.connectors.base import BaseConnector, RawIssue
 from gather.connectors.github import GitHubConnector
 from gather.connectors.jira import JiraConnector
 from gather.connectors.slack import SlackConnector
@@ -12,7 +12,7 @@ CONNECTOR_REGISTRY: dict[str, type[BaseConnector]] = {
 
 __all__ = [
     "BaseConnector",
-    "RawTicket",
+    "RawIssue",
     "CONNECTOR_REGISTRY",
     "JiraConnector",
     "SlackConnector",

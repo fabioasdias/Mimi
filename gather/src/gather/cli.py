@@ -12,7 +12,7 @@ import click
 
 from gather.config import GatherConfig
 from gather.connectors import CONNECTOR_REGISTRY
-from gather.connectors.base import BaseConnector, RawTicket
+from gather.connectors.base import BaseConnector, RawIssue
 from gather.consolidator import consolidate
 from gather.models import GatheredData, GatherMetadata
 
@@ -86,26 +86,26 @@ async def run_gather(output: Path, config: GatherConfig) -> None:
     )
 
     # Fetch from all sources concurrently
-    all_raw: list[RawTicket] = []
+    all_raw: list[RawIssue] = []
     results = await asyncio.gather(
-        *(c.fetch_tickets() for c in connectors)
+        *(c.fetch_issues() for c in connectors)
     )
-    for tickets in results:
-        all_raw.extend(tickets)
+    for issues in results:
+        all_raw.extend(issues)
 
-    logger.info("Fetched %d raw tickets", len(all_raw))
+    logger.info("Fetched %d raw issues", len(all_raw))
 
     # Consolidate
     consolidated = consolidate(all_raw)
     logger.info(
-        "Consolidated into %d tickets (from %d raw)",
+        "Consolidated into %d issues (from %d raw)",
         len(consolidated),
         len(all_raw),
     )
 
     # Write output
     data = GatheredData(
-        tickets=consolidated,
+        issues=consolidated,
         metadata=GatherMetadata(
             sources=[c.name for c in connectors],
         ),
@@ -115,7 +115,7 @@ async def run_gather(output: Path, config: GatherConfig) -> None:
     output.write_text(
         json.dumps(data.model_dump(mode="json"), indent=2, default=str)
     )
-    logger.info("Written %d tickets to %s", len(consolidated), output)
+    logger.info("Written %d issues to %s", len(consolidated), output)
 
 
 @click.command()
@@ -127,7 +127,7 @@ async def run_gather(output: Path, config: GatherConfig) -> None:
     help="Path to YAML config file",
 )
 def main(config_path: Path) -> None:
-    """Gather support tickets from configured services."""
+    """Gather support issues from configured services."""
     log_file = _setup_logging()
     logger.info("Log file: %s", log_file)
     logger.info("Loading config from %s", config_path)

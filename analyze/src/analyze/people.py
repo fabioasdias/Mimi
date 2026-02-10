@@ -1,7 +1,7 @@
 """Identity resolution and people graph building.
 
 Correlates people across sources by email (exact) and display name (fuzzy).
-Builds a networkx graph of people ↔ tickets ↔ services.
+Builds a networkx graph of people ↔ issues ↔ services.
 """
 
 from uuid import uuid4
@@ -29,7 +29,7 @@ def _person_key(source: str, source_id: str) -> str:
 
 
 def resolve_identities(
-    gathered_tickets: list[dict],
+    gathered_issues: list[dict],
 ) -> tuple[PeopleGraph, dict[str, str]]:
     """Resolve people identities across sources.
 
@@ -39,8 +39,8 @@ def resolve_identities(
     """
     # Collect all raw person entries
     raw_people: list[dict] = []
-    for ticket in gathered_tickets:
-        for person in ticket.get("people", []):
+    for issue in gathered_issues:
+        for person in issue.get("people", []):
             raw_people.append(person)
 
     # Build identity groups using union-find
@@ -136,21 +136,21 @@ def resolve_identities(
             PersonNode(id=node_id, label=label, identities=identities)
         )
 
-    # Build edges (person → ticket)
+    # Build edges (person → issue)
     edges: list[GraphEdge] = []
-    for ticket in gathered_tickets:
-        ticket_id = ticket["id"]
+    for issue in gathered_issues:
+        issue_id = issue["id"]
         seen_edges: set[tuple[str, str]] = set()
-        for person in ticket.get("people", []):
+        for person in issue.get("people", []):
             key = _person_key(person["source"], person["source_id"])
             node_id = key_to_node_id.get(key)
-            if node_id and (node_id, ticket_id) not in seen_edges:
-                seen_edges.add((node_id, ticket_id))
+            if node_id and (node_id, issue_id) not in seen_edges:
+                seen_edges.add((node_id, issue_id))
                 edges.append(
                     GraphEdge(
                         **{
                             "from": node_id,
-                            "to": ticket_id,
+                            "to": issue_id,
                             "role": person.get("role", "participant"),
                         }
                     )
@@ -192,7 +192,7 @@ def build_service_graph(analyses: list[IssueAnalysis]) -> ServiceGraph:
                     g.add_edge(svc_a, svc_b, co_occurrence=1)
 
     nodes = [
-        ServiceNode(id=n, ticket_count=g.nodes[n].get("issue_count", 0))
+        ServiceNode(id=n, issue_count=g.nodes[n].get("issue_count", 0))
         for n in g.nodes
     ]
     edges = [

@@ -1,0 +1,97 @@
+# Classification rules for support tickets
+# Each category has keywords/phrases and a weight (higher = more important)
+
+outage:
+  weight: 1.0
+  keywords:
+    - down
+    - outage
+    - unavailable
+    - "500"
+    - "503"
+    - timeout
+    - not responding
+    - can't access
+    - cannot access
+    - service is down
+    - incident
+    - degraded
+    - p1
+    - p0
+    - sev1
+    - sev0
+    - emergency
+
+bug:
+  weight: 0.8
+  keywords:
+    - bug
+    - error
+    - crash
+    - broken
+    - doesn't work
+    - does not work
+    - unexpected
+    - regression
+    - defect
+    - issue
+    - failing
+    - failed
+    - exception
+    - stacktrace
+    - stack trace
+
+new_feature:
+  weight: 0.9
+  keywords:
+    - feature request
+    - new feature
+    - enhancement
+    - would be nice
+    - could we add
+    - can we add
+    - requesting
+    - proposal
+    - rfc
+    - roadmap
+    - improvement
+
+user_error:
+  weight: 0.7
+  keywords:
+    - how do i
+    - how to
+    - help me
+    - confused
+    - don't understand
+    - where is
+    - can't find
+    - documentation
+    - what does
+    - is it possible
+    - tutorial
+
+wrong_team:
+  weight: 0.9
+  keywords:
+    - wrong team
+    - not our
+    - not my team
+    - redirect
+    - reassign
+    - belongs to
+    - should go to
+    - moved to
+    - transferred
+    - not responsible
+
+question:
+  weight: 0.6
+  keywords:
+    - question
+    - asking
+    - clarification
+    - wondering
+    - anyone know
+    - does anyone
+    - quick question

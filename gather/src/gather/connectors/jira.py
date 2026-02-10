@@ -6,7 +6,7 @@ from datetime import datetime
 import httpx
 
 from gather.config import SourceConfig
-from gather.connectors.base import BaseConnector, RawTicket
+from gather.connectors.base import BaseConnector, RawIssue
 from gather.models import Message, Person, SourceReference
 
 logger = logging.getLogger(__name__)
@@ -31,11 +31,11 @@ class JiraConnector(BaseConnector):
             headers={"Accept": "application/json"},
         )
 
-    async def fetch_tickets(self) -> list[RawTicket]:
+    async def fetch_issues(self) -> list[RawIssue]:
         jql = self.filters.get("jql", "ORDER BY updated DESC")
         logger.info("Fetching Jira issues with JQL: %s", jql)
 
-        tickets: list[RawTicket] = []
+        tickets: list[RawIssue] = []
         start_at = 0
         max_results = 50
 
@@ -64,7 +64,7 @@ class JiraConnector(BaseConnector):
         logger.info("Fetched %d Jira issues", len(tickets))
         return tickets
 
-    def _parse_issue(self, issue: dict) -> RawTicket:
+    def _parse_issue(self, issue: dict) -> RawIssue:
         fields = issue["fields"]
         key = issue["key"]
 
@@ -97,7 +97,7 @@ class JiraConnector(BaseConnector):
             if author_person.source_id not in {p.source_id for p in people}:
                 people.append(author_person)
 
-        return RawTicket(
+        return RawIssue(
             reference=SourceReference(
                 source="jira",
                 id=key,

@@ -7,8 +7,8 @@ from gather.config import SourceConfig
 from gather.models import Message, Person, SourceReference
 
 
-class RawTicket:
-    """Intermediate ticket representation from a single source."""
+class RawIssue:
+    """Intermediate issue representation from a single source."""
 
     def __init__(
         self,
@@ -53,12 +53,12 @@ class BaseConnector(ABC):
         ...
 
     @abstractmethod
-    async def fetch_tickets(self) -> list[RawTicket]:
-        """Fetch tickets/threads from the service.
+    async def fetch_issues(self) -> list[RawIssue]:
+        """Fetch issues/threads from the service.
 
         Timing filters (since_days, etc.) are read from self.filters.
 
         Returns:
-            List of raw tickets from this source.
+            List of raw issues from this source.
         """
         ...

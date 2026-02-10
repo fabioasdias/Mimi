@@ -70,7 +70,7 @@ def extract_services(
 
 def extract_services_spacy(nlp: Language, text: str) -> list[str]:
     """Use spaCy NER to find organization/product entities as potential services."""
-    doc = nlp(text[:10000])  # Limit text length for performance
+    doc = nlp(text)
     entities: set[str] = set()
 
     for ent in doc.ents:

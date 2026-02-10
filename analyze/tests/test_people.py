@@ -235,7 +235,7 @@ def test_build_service_graph_single_service():
     graph = build_service_graph(analyses)
     assert len(graph.nodes) == 1
     assert graph.nodes[0].id == "auth-service"
-    assert graph.nodes[0].ticket_count == 2
+    assert graph.nodes[0].issue_count == 2
     assert len(graph.edges) == 0  # No co-occurrence (single service per issue)
 
 
@@ -287,6 +287,6 @@ def test_build_service_graph_multiple_services():
     graph = build_service_graph(analyses)
     assert len(graph.nodes) == 3
     assert len(graph.edges) == 3  # 3 services = 3 pairs
-    # All nodes should have ticket_count = 1
+    # All nodes should have issue_count = 1
     for node in graph.nodes:
-        assert node.ticket_count == 1
+        assert node.issue_count == 1

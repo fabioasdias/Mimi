@@ -5,10 +5,11 @@ from pathlib import Path
 
 import click
 
-from analyze.classifier import classify_ticket
+from analyze.classifier import classify_issue
 from analyze.entities import extract_services, extract_services_spacy, load_nlp
 from analyze.models import AnalysisMetadata, AnalyzedData, IssueAnalysis
 from analyze.people import build_service_graph, resolve_identities
+from analyze.suggest import suggest_rules
 
 
 @click.command()
@@ -42,37 +43,44 @@ def main(
     services: tuple[str, ...],
     use_spacy_ner: bool,
 ) -> None:
-    """Analyze consolidated support tickets with NLP."""
+    """Analyze consolidated support issues with NLP."""
     gathered = json.loads(input_path.read_text())
-    tickets = gathered.get("tickets", [])
+    # Support both "issues" (new) and "tickets" (legacy) for backwards compatibility
+    issues = gathered.get("issues") or gathered.get("tickets", [])
 
-    click.echo(f"Analyzing {len(tickets)} issues...")
+    click.echo(f"Analyzing {len(issues)} issues...")
 
     known_services = set(services) if services else None
     nlp = load_nlp() if use_spacy_ner else None
 
+    # Load NLP model once for all classifications
+    classifier_nlp = load_nlp()
+
     # Classify each issue
     analyses: list[IssueAnalysis] = []
-    for ticket in tickets:
+    for issue in issues:
         conversation_text = "\n".join(
-            m.get("content", "") for m in ticket.get("conversation", [])
+            m.get("content", "") for m in issue.get("conversation", [])
         )
-        title = ticket.get("title", "")
+        title = issue.get("title", "")
 
-        classification = classify_ticket(title, conversation_text)
+        # Classify using NLP (which also extracts entities)
+        classification = classify_issue(title, conversation_text, classifier_nlp)
 
-        # Extract services
+        # Enhance with additional service extraction
         full_text = f"{title}\n{conversation_text}"
         found_services = extract_services(full_text, known_services)
-        if nlp:
+        if use_spacy_ner and nlp:
             spacy_services = extract_services_spacy(nlp, full_text)
             found_services = sorted(set(found_services) | set(spacy_services))
 
-        classification.services = found_services
+        # Merge classifier's extracted entities with explicit service extraction
+        all_services = sorted(set(classification.services) | set(found_services))
+        classification.services = all_services
 
         analyses.append(
             IssueAnalysis(
-                id=ticket["id"],
+                id=issue["id"],
                 classification=classification,
             )
         )
@@ -80,7 +88,7 @@ def main(
     click.echo(f"Classified {len(analyses)} issues")
 
     # Resolve people identities and build graph
-    people_graph, _ = resolve_identities(tickets)
+    people_graph, _ = resolve_identities(issues)
     click.echo(
         f"Resolved {len(people_graph.nodes)} unique people "
         f"with {len(people_graph.edges)} relationships"
@@ -106,3 +114,32 @@ def main(
         json.dumps(data.model_dump(mode="json", by_alias=True), indent=2)
     )
     click.echo(f"Written to {output_path}")
+
+
+@click.command()
+@click.option(
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, path_type=Path),
+    default="data/gathered.json",
+    help="Path to gathered JSON file",
+)
+def suggest(input_path: Path) -> None:
+    """Suggest new classification keywords based on gathered data."""
+    click.echo(f"Analyzing {input_path} for keyword suggestions...")
+
+    results = suggest_rules(input_path)
+
+    click.echo(f"\nAnalyzed {results['total_issues']} issues")
+    click.echo("\nSentiment distribution:")
+    for sentiment, count in results["sentiment_distribution"].items():
+        pct = count / results["total_issues"] * 100
+        click.echo(f"  {sentiment}: {count} ({pct:.1f}%)")
+
+    click.echo("\nTop 30 suggested keywords:")
+    for keyword, freq in results["suggested_keywords"]:
+        click.echo(f"  {keyword:20s} ({freq} occurrences)")
+
+    click.echo(
+        "\nTo add keywords: edit analyze/classify_rules.yaml and re-run analyze"
+    )

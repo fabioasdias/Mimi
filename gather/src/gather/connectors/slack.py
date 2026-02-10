@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import httpx
 
 from gather.config import SourceConfig
-from gather.connectors.base import BaseConnector, RawTicket
+from gather.connectors.base import BaseConnector, RawIssue
 from gather.models import Message, Person, SourceReference
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class SlackConnector(BaseConnector):
         )
         self._user_cache: dict[str, dict] = {}
 
-    async def fetch_tickets(self) -> list[RawTicket]:
+    async def fetch_issues(self) -> list[RawIssue]:
         channels = self.filters.get("channels", [])
         oldest_days = self.filters.get("oldest_days")
 
@@ -37,7 +37,7 @@ class SlackConnector(BaseConnector):
         if oldest_days:
             since = datetime.now() - timedelta(days=int(oldest_days))
 
-        tickets: list[RawTicket] = []
+        issues: list[RawIssue] = []
 
         for channel_id in channels:
             logger.info("Fetching threads from channel %s", channel_id)
@@ -56,17 +56,17 @@ class SlackConnector(BaseConnector):
                 continue
 
             for msg in data.get("messages", []):
-                # Only treat threaded messages as "tickets"
+                # Only treat threaded messages as "issues"
                 if "thread_ts" not in msg or msg["ts"] != msg["thread_ts"]:
                     continue
 
-                ticket = await self._parse_thread(channel_id, msg)
-                tickets.append(ticket)
+                issue = await self._parse_thread(channel_id, msg)
+                issues.append(issue)
 
-        logger.info("Fetched %d Slack threads", len(tickets))
-        return tickets
+        logger.info("Fetched %d Slack threads", len(issues))
+        return issues
 
-    async def _parse_thread(self, channel_id: str, parent: dict) -> RawTicket:
+    async def _parse_thread(self, channel_id: str, parent: dict) -> RawIssue:
         thread_ts = parent["thread_ts"]
 
         resp = await self._client.get(
@@ -117,7 +117,7 @@ class SlackConnector(BaseConnector):
         last_msg = thread_messages[-1]
         updated_ts = float(last_msg.get("ts", "0"))
 
-        return RawTicket(
+        return RawIssue(
             reference=SourceReference(
                 source="slack",
                 id=thread_ts,
