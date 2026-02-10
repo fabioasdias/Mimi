@@ -7,7 +7,7 @@ import click
 
 from analyze.classifier import classify_ticket
 from analyze.entities import extract_services, extract_services_spacy, load_nlp
-from analyze.models import AnalysisMetadata, AnalyzedData, TicketAnalysis
+from analyze.models import AnalysisMetadata, AnalyzedData, IssueAnalysis
 from analyze.people import build_service_graph, resolve_identities
 
 
@@ -46,13 +46,13 @@ def main(
     gathered = json.loads(input_path.read_text())
     tickets = gathered.get("tickets", [])
 
-    click.echo(f"Analyzing {len(tickets)} tickets...")
+    click.echo(f"Analyzing {len(tickets)} issues...")
 
     known_services = set(services) if services else None
     nlp = load_nlp() if use_spacy_ner else None
 
-    # Classify each ticket
-    analyses: list[TicketAnalysis] = []
+    # Classify each issue
+    analyses: list[IssueAnalysis] = []
     for ticket in tickets:
         conversation_text = "\n".join(
             m.get("content", "") for m in ticket.get("conversation", [])
@@ -71,13 +71,13 @@ def main(
         classification.services = found_services
 
         analyses.append(
-            TicketAnalysis(
+            IssueAnalysis(
                 id=ticket["id"],
                 classification=classification,
             )
         )
 
-    click.echo(f"Classified {len(analyses)} tickets")
+    click.echo(f"Classified {len(analyses)} issues")
 
     # Resolve people identities and build graph
     people_graph, _ = resolve_identities(tickets)
@@ -95,7 +95,7 @@ def main(
 
     # Write output
     data = AnalyzedData(
-        tickets=analyses,
+        issues=analyses,
         people_graph=people_graph,
         service_graph=service_graph,
         metadata=AnalysisMetadata(),

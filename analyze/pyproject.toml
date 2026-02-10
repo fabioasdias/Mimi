@@ -11,6 +11,12 @@ dependencies = [
     "click>=8.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+]
+
 [project.scripts]
 analyze = "analyze.cli:main"
 

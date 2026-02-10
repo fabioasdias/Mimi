@@ -17,7 +17,7 @@ from analyze.models import (
     ServiceEdge,
     ServiceGraph,
     ServiceNode,
-    TicketAnalysis,
+    IssueAnalysis,
 )
 
 # Minimum fuzzy match score to consider names as the same person
@@ -172,16 +172,16 @@ def resolve_identities(
     return PeopleGraph(nodes=nodes, edges=edges), key_to_node_id
 
 
-def build_service_graph(analyses: list[TicketAnalysis]) -> ServiceGraph:
-    """Build a co-occurrence graph of services from ticket analyses."""
+def build_service_graph(analyses: list[IssueAnalysis]) -> ServiceGraph:
+    """Build a co-occurrence graph of services from issue analyses."""
     g = nx.Graph()
 
     for analysis in analyses:
         services = analysis.classification.services
         for svc in services:
             if not g.has_node(svc):
-                g.add_node(svc, ticket_count=0)
-            g.nodes[svc]["ticket_count"] += 1
+                g.add_node(svc, issue_count=0)
+            g.nodes[svc]["issue_count"] += 1
 
         # Add co-occurrence edges
         for i, svc_a in enumerate(services):
@@ -192,7 +192,7 @@ def build_service_graph(analyses: list[TicketAnalysis]) -> ServiceGraph:
                     g.add_edge(svc_a, svc_b, co_occurrence=1)
 
     nodes = [
-        ServiceNode(id=n, ticket_count=g.nodes[n].get("ticket_count", 0))
+        ServiceNode(id=n, ticket_count=g.nodes[n].get("issue_count", 0))
         for n in g.nodes
     ]
     edges = [

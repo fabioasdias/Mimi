@@ -27,4 +27,4 @@ logs/
 
 # OS
 .DS_Store
-gather/.coverage
+.coverage

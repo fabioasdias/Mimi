@@ -14,8 +14,8 @@ class Classification(BaseModel):
     summary: str
 
 
-class TicketAnalysis(BaseModel):
-    """Analysis result for a single ticket."""
+class IssueAnalysis(BaseModel):
+    """Analysis result for a single issue."""
 
     id: str  # matches gather output
     classification: Classification
@@ -91,7 +91,7 @@ class AnalysisMetadata(BaseModel):
 class AnalyzedData(BaseModel):
     """Top-level output of the analyze module."""
 
-    tickets: list[TicketAnalysis]
+    issues: list[IssueAnalysis]
     people_graph: PeopleGraph
     service_graph: ServiceGraph
     metadata: AnalysisMetadata
