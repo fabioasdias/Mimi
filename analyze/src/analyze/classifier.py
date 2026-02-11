@@ -112,7 +112,6 @@ def classify_by_linguistic_features(
         "outage": 0.0,
         "defect": 0.0,
         "enhancement": 0.0,
-        "clarification": 0.0,
         "inquiry": 0.0,
         "routing_issue": 0.0,
     }
@@ -143,10 +142,9 @@ def classify_by_linguistic_features(
     if features.has_modal and max(scores.values()) < 2.0:
         scores["enhancement"] += 1.5
 
-    # Boost questions if question markers present
+    # Boost questions if question markers present (documentation failure)
     if features.has_question:
-        scores["inquiry"] += 1.5
-        scores["clarification"] += 1.0
+        scores["inquiry"] += 2.0
 
     # Negation + action verbs often indicate bugs (only if no strong routing_issue signal)
     if features.has_negation and features.verb_lemmas and scores["routing_issue"] < 1.0:

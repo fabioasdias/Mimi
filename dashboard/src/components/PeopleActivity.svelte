@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
   import type { IssueAnalysis, PeopleGraph } from '../lib/types';
+  import { filters, issueMatchesFilters } from '../lib/store';
 
   interface Props {
     issues: IssueAnalysis[];
@@ -11,8 +12,24 @@
   let { issues, peopleGraph }: Props = $props();
   let reportersContainer: HTMLDivElement;
   let respondersContainer: HTMLDivElement;
+  let mounted = $state(false);
 
-  onMount(() => {
+  // Subscribe to filters and trigger update
+  $effect(() => {
+    const currentFilters = $filters;  // Track dependency
+    if (mounted) renderCharts();
+  });
+
+  function renderCharts() {
+    if (!reportersContainer || !respondersContainer) return;
+
+    // Filter issues
+    const filteredIssues = issues.filter(issue => issueMatchesFilters(issue, $filters));
+
+    // Clear existing charts
+    d3.select(reportersContainer).selectAll('*').remove();
+    d3.select(respondersContainer).selectAll('*').remove();
+
     // Build person -> issue type mapping for reporters
     const personActivity = new Map<string, {
       reported: Map<string, number>;
@@ -21,7 +38,7 @@
     }>();
 
     // Process each issue with its people data
-    issues.forEach((issue) => {
+    filteredIssues.forEach((issue) => {
       const issueType = issue.classification.type;
 
       issue.people?.forEach((person: any) => {
@@ -70,6 +87,11 @@
       .slice(0, 10);
 
     renderResponders(responderData);
+  }
+
+  onMount(() => {
+    mounted = true;
+    renderCharts();
   });
 
   function renderReporters(data: any[]) {
@@ -127,7 +149,13 @@
     svg.append('g')
       .call(d3.axisLeft(y))
       .selectAll('text')
-      .attr('font-size', '11px');
+      .attr('font-size', '11px')
+      .attr('font-weight', (d: any) => $filters.selectedPeople.has(d) ? 'bold' : 'normal')
+      .attr('fill', (d: any) => $filters.selectedPeople.has(d) ? '#4f46e5' : '#000')
+      .style('cursor', 'pointer')
+      .on('click', (_event: any, d: any) => filters.togglePerson(d))
+      .append('title')
+      .text('Click to filter by this person');
 
     // Title
     svg.append('text')
@@ -210,7 +238,13 @@
     svg.append('g')
       .call(d3.axisLeft(y))
       .selectAll('text')
-      .attr('font-size', '11px');
+      .attr('font-size', '11px')
+      .attr('font-weight', (d: any) => $filters.selectedPeople.has(d) ? 'bold' : 'normal')
+      .attr('fill', (d: any) => $filters.selectedPeople.has(d) ? '#4f46e5' : '#000')
+      .style('cursor', 'pointer')
+      .on('click', (_event: any, d: any) => filters.togglePerson(d))
+      .append('title')
+      .text('Click to filter by this person');
 
     // Title
     svg.append('text')

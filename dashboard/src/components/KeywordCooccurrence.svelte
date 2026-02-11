@@ -1,42 +1,77 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
-  import type { KeywordGraph } from '../lib/types';
+  import type { IssueAnalysis } from '../lib/types';
+  import { filters, issueMatchesFilters } from '../lib/store';
 
   interface Props {
-    keywordGraph: KeywordGraph;
+    issues: IssueAnalysis[];
   }
 
-  let { keywordGraph }: Props = $props();
+  let { issues }: Props = $props();
   let container: HTMLDivElement;
   let error = $state('');
+  let mounted = $state(false);
 
-  onMount(() => {
+  // Subscribe to filters and trigger update
+  $effect(() => {
+    const currentFilters = $filters;  // Track dependency
+    if (mounted) updateChart();
+  });
+
+  function updateChart() {
     try {
+      d3.select(container).selectAll('*').remove();
+
+      // Filter issues based on current filters
+      const filteredIssues = issues.filter(issue => issueMatchesFilters(issue, $filters));
+
       const margin = { top: 100, right: 20, bottom: 80, left: 150 };
       const cellSize = 25;
 
+      // Count keywords
+      const keywordCounts = new Map<string, number>();
+      filteredIssues.forEach(issue => {
+        issue.classification.keywords.forEach(keyword => {
+          keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+        });
+      });
+
       // Get top keywords
-      const topKeywords = keywordGraph.nodes
-        .sort((a, b) => b.issue_count - a.issue_count)
+      const topKeywords = Array.from(keywordCounts.entries())
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 20)
-        .map(n => n.id);
+        .map(([keyword]) => keyword);
 
       const topKeywordsSet = new Set(topKeywords);
 
-      // Build co-occurrence matrix
+      // Build co-occurrence matrix by counting keywords that appear together
       const cooccurrenceMap = new Map<string, Map<string, number>>();
 
       topKeywords.forEach(kw => {
         cooccurrenceMap.set(kw, new Map());
       });
 
-      keywordGraph.edges
-        .filter(e => topKeywordsSet.has(e.from) && topKeywordsSet.has(e.to))
-        .forEach(edge => {
-          cooccurrenceMap.get(edge.from)?.set(edge.to, edge.co_occurrence);
-          cooccurrenceMap.get(edge.to)?.set(edge.from, edge.co_occurrence);
-        });
+      filteredIssues.forEach(issue => {
+        const issueKeywords = issue.classification.keywords.filter(kw => topKeywordsSet.has(kw));
+        // For each pair of keywords in this issue
+        for (let i = 0; i < issueKeywords.length; i++) {
+          for (let j = i + 1; j < issueKeywords.length; j++) {
+            const kw1 = issueKeywords[i];
+            const kw2 = issueKeywords[j];
+
+            const map1 = cooccurrenceMap.get(kw1);
+            if (map1) {
+              map1.set(kw2, (map1.get(kw2) || 0) + 1);
+            }
+
+            const map2 = cooccurrenceMap.get(kw2);
+            if (map2) {
+              map2.set(kw1, (map2.get(kw1) || 0) + 1);
+            }
+          }
+        }
+      });
 
       const width = topKeywords.length * cellSize + margin.left + margin.right;
       const height = topKeywords.length * cellSize + margin.top + margin.bottom;
@@ -99,7 +134,7 @@
         });
       });
 
-      // Y-axis labels
+      // Y-axis labels (clickable to filter)
       g.selectAll('text.keyword-y')
         .data(topKeywords)
         .join('text')
@@ -109,9 +144,15 @@
         .attr('text-anchor', 'end')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', '10px')
-        .text(d => d.length > 20 ? d.substring(0, 17) + '...' : d);
+        .attr('font-weight', d => $filters.selectedKeywords.has(d) ? 'bold' : 'normal')
+        .attr('fill', d => $filters.selectedKeywords.has(d) ? '#4f46e5' : '#000')
+        .style('cursor', 'pointer')
+        .text(d => d.length > 20 ? d.substring(0, 17) + '...' : d)
+        .on('click', (_event, d) => filters.toggleKeyword(d))
+        .append('title')
+        .text('Click to filter by this keyword');
 
-      // X-axis labels
+      // X-axis labels (clickable to filter)
       g.selectAll('text.keyword-x')
         .data(topKeywords)
         .join('text')
@@ -121,7 +162,13 @@
         .attr('text-anchor', 'start')
         .attr('transform', (d, i) => `rotate(-45, ${i * cellSize + cellSize / 2}, -5)`)
         .attr('font-size', '10px')
-        .text(d => d.length > 20 ? d.substring(0, 17) + '...' : d);
+        .attr('font-weight', d => $filters.selectedKeywords.has(d) ? 'bold' : 'normal')
+        .attr('fill', d => $filters.selectedKeywords.has(d) ? '#4f46e5' : '#000')
+        .style('cursor', 'pointer')
+        .text(d => d.length > 20 ? d.substring(0, 17) + '...' : d)
+        .on('click', (_event, d) => filters.toggleKeyword(d))
+        .append('title')
+        .text('Click to filter by this keyword');
 
       // Title
       svg.append('text')
@@ -187,6 +234,11 @@
       console.error('KeywordCooccurrence error:', e);
       error = e instanceof Error ? e.message : String(e);
     }
+  }
+
+  onMount(() => {
+    mounted = true;
+    updateChart();
   });
 </script>
 

@@ -56,21 +56,6 @@ enhancement:
     - roadmap
     - improvement
 
-clarification:
-  weight: 0.7
-  keywords:
-    - how do i
-    - how to
-    - help me
-    - confused
-    - don't understand
-    - where is
-    - can't find
-    - documentation
-    - what does
-    - is it possible
-    - tutorial
-
 routing_issue:
   weight: 0.9
   keywords:
@@ -86,8 +71,9 @@ routing_issue:
     - not responsible
 
 inquiry:
-  weight: 0.6
+  weight: 0.7
   keywords:
+    # Questions and requests for information
     - question
     - asking
     - clarification
@@ -95,3 +81,15 @@ inquiry:
     - anyone know
     - does anyone
     - quick question
+    # How-to and documentation gaps
+    - how do i
+    - how to
+    - help me
+    - confused
+    - don't understand
+    - where is
+    - can't find
+    - documentation
+    - what does
+    - is it possible
+    - tutorial

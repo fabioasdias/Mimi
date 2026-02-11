@@ -48,10 +48,16 @@ sources:
     filters:
       repos: [company/platform]
       labels: [bug, support]
-      state: all
+      state: all           # "open", "closed", or "all" (default: "all")
+      since_days: 30       # Optional: limit to recently updated issues
 ```
 
 Auth values support `${ENV_VAR}` syntax so secrets stay out of the file.
+
+**Issue Status Filtering:**
+- **GitHub**: Use `state: open` to get only open issues, `state: closed` for closed, or `state: all` (default) for both
+- **Jira**: Add status conditions to your JQL, e.g., `"status NOT IN (Done, Closed) AND updated >= -30d"`
+- **Slack**: No status concept (all threads are fetched)
 
 ## Usage
 

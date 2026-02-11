@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
   import type { IssueAnalysis } from '../lib/types';
+  import { filters, issueMatchesFilters } from '../lib/store';
 
   interface Props {
     issues: IssueAnalysis[];
@@ -9,14 +10,25 @@
 
   let { issues }: Props = $props();
   let container: HTMLDivElement;
+  let mounted = $state(false);
 
-  onMount(() => {
+  // Subscribe to filters and trigger update
+  $effect(() => {
+    const currentFilters = $filters;  // Track dependency
+    if (mounted) updateChart();
+  });
+
+  function updateChart() {
+    d3.select(container).selectAll('*').remove();
+
+    // Filter issues first
+    const filteredIssues = issues.filter(issue => issueMatchesFilters(issue, $filters));
     const margin = { top: 20, right: 20, bottom: 60, left: 150 };
     const width = 800 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
     // Filter for documentation-related issues (inquiries and clarifications)
-    const docIssues = issues.filter(
+    const docIssues = filteredIssues.filter(
       i => i.classification.type === 'inquiry' || i.classification.type === 'clarification'
     );
 
@@ -123,7 +135,7 @@
 
     // Legend
     const legend = svg.append('g')
-      .attr('transform', `translate(${width - 150}, 10})`);
+      .attr('transform', `translate(${width - 150}, 10)`);
 
     legend.append('rect')
       .attr('width', 12)
@@ -151,6 +163,11 @@
       .attr('dy', '0.35em')
       .attr('font-size', '11px')
       .text('Inquiries');
+  }
+
+  onMount(() => {
+    mounted = true;
+    updateChart();
   });
 </script>
 

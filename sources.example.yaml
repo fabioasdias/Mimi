@@ -12,6 +12,9 @@ sources:
       email: you@company.com
       api_token: ${JIRA_API_TOKEN}
     filters:
+      # JQL query - customize as needed
+      # To include all statuses (default): no status filter
+      # To exclude closed: add "AND status NOT IN (Done, Closed, Resolved)"
       jql: "project in (AUTH, PLAT, BILL) AND updated >= -30d"
 
   support-slack:
@@ -35,4 +38,5 @@ sources:
       labels:
         - bug
         - support
-      state: all  # open, closed, or all
+      state: all  # Options: "open", "closed", or "all" (default: "all")
+      since_days: 30  # Optional: only fetch issues updated in last N days

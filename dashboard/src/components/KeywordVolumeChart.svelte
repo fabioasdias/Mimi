@@ -1,24 +1,51 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
-  import type { KeywordGraph } from '../lib/types';
+  import type { IssueAnalysis } from '../lib/types';
+  import { filters, issueMatchesFilters } from '../lib/store';
 
   interface Props {
-    keywordGraph: KeywordGraph;
+    issues: IssueAnalysis[];
   }
 
-  let { keywordGraph }: Props = $props();
+  let { issues }: Props = $props();
   let container: HTMLDivElement;
+  let mounted = $state(false);
 
-  onMount(() => {
+  // Subscribe to filters and trigger update
+  $effect(() => {
+    const currentFilters = $filters;  // Track dependency
+    if (mounted) updateChart();
+  });
+
+  function updateChart() {
+    d3.select(container).selectAll('*').remove();
+
+    // Filter issues based on current filters
+    const filteredIssues = issues.filter(issue => issueMatchesFilters(issue, $filters));
+
     const margin = { top: 20, right: 20, bottom: 60, left: 120 };
     const width = 800 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
-    // Sort keywords by issue count
-    const sortedKeywords = [...keywordGraph.nodes]
+    // Count keywords from filtered issues
+    const keywordCounts = new Map<string, number>();
+    filteredIssues.forEach(issue => {
+      issue.classification.keywords.forEach(keyword => {
+        keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+      });
+    });
+
+    // Sort keywords by count
+    const sortedKeywords = Array.from(keywordCounts.entries())
+      .map(([id, count]) => ({ id, issue_count: count }))
       .sort((a, b) => b.issue_count - a.issue_count)
       .slice(0, 15); // Top 15
+
+    if (sortedKeywords.length === 0) {
+      d3.select(container).append('p').text('No keywords found');
+      return;
+    }
 
     const svg = d3.select(container)
       .append('svg')
@@ -47,7 +74,7 @@
       .attr('fill', '#4f46e5')
       .attr('rx', 4);
 
-    // Labels
+    // Value labels
     svg.selectAll('text.label')
       .data(sortedKeywords)
       .join('text')
@@ -59,11 +86,17 @@
       .attr('fill', '#374151')
       .attr('font-size', '12px');
 
-    // Y axis
+    // Y axis with clickable keywords
     svg.append('g')
       .call(d3.axisLeft(y))
       .selectAll('text')
-      .attr('font-size', '12px');
+      .attr('font-size', '12px')
+      .attr('font-weight', d => $filters.selectedKeywords.has(d) ? 'bold' : 'normal')
+      .attr('fill', d => $filters.selectedKeywords.has(d) ? '#4f46e5' : '#000')
+      .style('cursor', 'pointer')
+      .on('click', (_event, d) => filters.toggleKeyword(d))
+      .append('title')
+      .text('Click to filter by this keyword');
 
     // Title
     svg.append('text')
@@ -73,6 +106,11 @@
       .attr('font-size', '16px')
       .attr('font-weight', 'bold')
       .text('Issues by Keyword (Top 15)');
+  }
+
+  onMount(() => {
+    mounted = true;
+    updateChart();
   });
 </script>
 

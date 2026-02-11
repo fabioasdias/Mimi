@@ -155,6 +155,7 @@
       </header>
 
       <div id="dashboard-content">
+        <div id="filterStatus"></div>
         <p class="meta">
           Analyzed <span id="totalIssues">0</span> issues | Last updated: <span id="lastUpdated">-</span>
         </p>
@@ -179,6 +180,9 @@
         </div>
 
         <div class="charts">
+          <div class="chart-card full-width">
+            <div id="temporalKeywordFlow"></div>
+          </div>
           <div class="chart-card">
             <div id="serviceVolumeChart"></div>
           </div>
@@ -251,6 +255,8 @@
 
           // Dynamically import and mount components
           const [
+            { default: FilterStatus },
+            { default: TemporalKeywordFlow },
             { default: KeywordVolumeChart },
             { default: ClassificationBreakdown },
             { default: KeywordTypeMatrix },
@@ -259,6 +265,8 @@
             { default: DocumentationGaps },
             { default: PeopleActivity }
           ] = await Promise.all([
+            import('../components/FilterStatus.svelte'),
+            import('../components/TemporalKeywordFlow.svelte'),
             import('../components/KeywordVolumeChart.svelte'),
             import('../components/ClassificationBreakdown.svelte'),
             import('../components/KeywordTypeMatrix.svelte'),
@@ -268,10 +276,20 @@
             import('../components/PeopleActivity.svelte')
           ]);
 
+          // Render filter status
+          mount(FilterStatus, {
+            target: document.getElementById('filterStatus')!
+          });
+
           // Render charts
+          mount(TemporalKeywordFlow, {
+            target: document.getElementById('temporalKeywordFlow')!,
+            props: { issues: analyzed.issues }
+          });
+
           mount(KeywordVolumeChart, {
             target: document.getElementById('serviceVolumeChart')!,
-            props: { keywordGraph: analyzed.keyword_graph }
+            props: { issues: analyzed.issues }
           });
 
           mount(ClassificationBreakdown, {
@@ -286,7 +304,7 @@
 
           mount(KeywordCooccurrence, {
             target: document.getElementById('keywordCooccurrence')!,
-            props: { keywordGraph: analyzed.keyword_graph }
+            props: { issues: analyzed.issues }
           });
 
           mount(PeopleKeywordMatrix, {

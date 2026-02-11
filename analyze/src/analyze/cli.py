@@ -95,6 +95,8 @@ def main(
                 id=issue["id"],
                 classification=classification,
                 people=people,
+                created_at=issue.get("created_at"),
+                updated_at=issue.get("updated_at"),
             )
         )
 

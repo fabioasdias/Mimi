@@ -30,6 +30,8 @@ class IssueAnalysis(BaseModel):
     id: str  # matches gather output
     classification: Classification
     people: list[IssuePerson] = []
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class Identity(BaseModel):

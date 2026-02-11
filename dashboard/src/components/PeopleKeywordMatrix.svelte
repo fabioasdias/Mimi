@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
   import type { IssueAnalysis, PeopleGraph } from '../lib/types';
+  import { filters, issueMatchesFilters } from '../lib/store';
 
   interface Props {
     issues: IssueAnalysis[];
@@ -11,9 +12,21 @@
   let { issues, peopleGraph }: Props = $props();
   let container: HTMLDivElement;
   let error = $state('');
+  let mounted = $state(false);
 
-  onMount(() => {
+  // Subscribe to filters and trigger update
+  $effect(() => {
+    const currentFilters = $filters;  // Track dependency
+    if (mounted) updateChart();
+  });
+
+  function updateChart() {
     try {
+    d3.select(container).selectAll('*').remove();
+
+    // Filter issues based on current filters
+    const filteredIssues = issues.filter(issue => issueMatchesFilters(issue, $filters));
+
     const margin = { top: 120, right: 20, bottom: 80, left: 200 };
     const cellSize = 25;
 
@@ -27,7 +40,7 @@
       personNames.set(node.id, node.label);
     });
 
-    issues.forEach(issue => {
+    filteredIssues.forEach(issue => {
       issue.people?.forEach((person: any) => {
         // Use person ID from people_graph if available
         const personKey = `${person.source}:${person.source_id}`;
@@ -56,7 +69,7 @@
       .map(d => d.person);
 
     const keywordCounts = new Map<string, number>();
-    issues.forEach(issue => {
+    filteredIssues.forEach(issue => {
       issue.classification.keywords.forEach(kw => {
         keywordCounts.set(kw, (keywordCounts.get(kw) || 0) + 1);
       });
@@ -128,7 +141,7 @@
       });
     });
 
-    // Y-axis labels (people)
+    // Y-axis labels (people) - clickable to filter
     g.selectAll('text.person')
       .data(topPeople)
       .join('text')
@@ -138,9 +151,15 @@
       .attr('text-anchor', 'end')
       .attr('dominant-baseline', 'middle')
       .attr('font-size', '11px')
-      .text(d => d.length > 25 ? d.substring(0, 22) + '...' : d);
+      .attr('font-weight', d => $filters.selectedPeople.has(d) ? 'bold' : 'normal')
+      .attr('fill', d => $filters.selectedPeople.has(d) ? '#4f46e5' : '#000')
+      .style('cursor', 'pointer')
+      .text(d => d.length > 25 ? d.substring(0, 22) + '...' : d)
+      .on('click', (_event, d) => filters.togglePerson(d))
+      .append('title')
+      .text('Click to filter by this person');
 
-    // X-axis labels (keywords)
+    // X-axis labels (keywords) - clickable to filter
     g.selectAll('text.keyword')
       .data(topKeywords)
       .join('text')
@@ -150,7 +169,13 @@
       .attr('text-anchor', 'start')
       .attr('transform', (d, i) => `rotate(-45, ${i * cellSize + cellSize / 2}, -5)`)
       .attr('font-size', '11px')
-      .text(d => d.length > 20 ? d.substring(0, 17) + '...' : d);
+      .attr('font-weight', d => $filters.selectedKeywords.has(d) ? 'bold' : 'normal')
+      .attr('fill', d => $filters.selectedKeywords.has(d) ? '#4f46e5' : '#000')
+      .style('cursor', 'pointer')
+      .text(d => d.length > 20 ? d.substring(0, 17) + '...' : d)
+      .on('click', (_event, d) => filters.toggleKeyword(d))
+      .append('title')
+      .text('Click to filter by this keyword');
 
     // Title
     svg.append('text')
@@ -216,6 +241,11 @@
       console.error('PeopleKeywordMatrix error:', e);
       error = e instanceof Error ? e.message : String(e);
     }
+  }
+
+  onMount(() => {
+    mounted = true;
+    updateChart();
   });
 </script>
 
