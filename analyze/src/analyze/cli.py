@@ -63,9 +63,21 @@ def main(
             m.get("content", "") for m in issue.get("conversation", [])
         )
         title = issue.get("title", "")
+        issue_id = issue.get("id", "")
+
+        # Extract context from issue source (e.g., "github", "jira", "slack")
+        # Can be used for context-specific classification rules
+        context = issue.get("source", {}).get("source") if isinstance(issue.get("source"), dict) else None
 
         # Classify using NLP (which also extracts entities)
-        classification = classify_issue(title, conversation_text, classifier_nlp)
+        # Pass issue_id for manual corrections and context for context-specific rules
+        classification = classify_issue(
+            title,
+            conversation_text,
+            classifier_nlp,
+            issue_id=issue_id,
+            context=context,
+        )
 
         # Enhance with additional keyword extraction
         full_text = f"{title}\n{conversation_text}"
@@ -133,28 +145,153 @@ def main(
 
 @click.command()
 @click.option(
-    "--input",
-    "input_path",
+    "--analyzed",
+    "analyzed_path",
+    type=click.Path(exists=True, path_type=Path),
+    default="data/analyzed.json",
+    help="Path to analyzed JSON file with classifications",
+)
+@click.option(
+    "--gathered",
+    "gathered_path",
     type=click.Path(exists=True, path_type=Path),
     default="data/gathered.json",
-    help="Path to gathered JSON file",
+    help="Path to gathered JSON file (needed for learning)",
 )
-def suggest(input_path: Path) -> None:
-    """Suggest new classification keywords based on gathered data."""
-    click.echo(f"Analyzing {input_path} for keyword suggestions...")
+@click.option(
+    "--interactive/--no-interactive",
+    default=False,
+    help="Interactive mode: review and correct low-confidence issues",
+)
+@click.option(
+    "--confidence-threshold",
+    type=float,
+    default=0.5,
+    help="Flag classifications below this confidence for review",
+)
+@click.option(
+    "--context",
+    type=str,
+    default=None,
+    help="Context name for learned rules (e.g., 'azure-platform')",
+)
+def suggest(
+    analyzed_path: Path,
+    gathered_path: Path,
+    interactive: bool,
+    confidence_threshold: float,
+    context: str | None,
+) -> None:
+    """Analyze classification results and learn from corrections.
 
-    results = suggest_rules(input_path)
+    Two modes:
+    1. Report mode (default): Show classification quality and suggestions
+    2. Interactive mode (--interactive): Review issues and learn from corrections
+    """
+    from analyze.improve import (
+        analyze_classification_quality,
+        apply_learned_patterns,
+        learn_from_correction,
+    )
 
-    click.echo(f"\nAnalyzed {results['total_issues']} issues")
-    click.echo("\nSentiment distribution:")
-    for sentiment, count in results["sentiment_distribution"].items():
-        pct = count / results["total_issues"] * 100
-        click.echo(f"  {sentiment}: {count} ({pct:.1f}%)")
+    # Analyze classification quality
+    results = analyze_classification_quality(analyzed_path, confidence_threshold)
 
-    click.echo("\nTop 30 suggested keywords:")
-    for keyword, freq in results["suggested_keywords"]:
-        click.echo(f"  {keyword:20s} ({freq} occurrences)")
+    if not results["issues"]:
+        click.echo("No issues found in analyzed data")
+        return
+
+    click.echo(f"Analyzing {len(results['issues'])} classified issues...\n")
+
+    # Report findings
+    click.echo("Classification Summary:")
+    for issue_type, issue_list in sorted(
+        results["by_type"].items(), key=lambda x: -len(x[1])
+    ):
+        avg_conf = (
+            sum(i["classification"]["confidence"] for i in issue_list)
+            / len(issue_list)
+            if issue_list
+            else 0
+        )
+        click.echo(
+            f"  {issue_type:15s}: {len(issue_list):4d} issues (avg confidence: {avg_conf:.2f})"
+        )
+
+    if not results["low_confidence"]:
+        click.echo("\n✓ All classifications above threshold!")
+        return
 
     click.echo(
-        "\nTo add keywords: edit analyze/classify_rules.yaml and re-run analyze"
+        f"\n⚠ {len(results['low_confidence'])} low-confidence classifications (< {confidence_threshold})"
     )
+
+    if not interactive:
+        # Just show summary
+        for item in results["low_confidence"][:10]:
+            click.echo(
+                f"  [{item['type']:12s}] {item['confidence']:.2f} - {item['summary']}"
+            )
+        if len(results["low_confidence"]) > 10:
+            click.echo(f"  ... and {len(results['low_confidence']) - 10} more")
+        click.echo("\nRun with --interactive to review and correct these")
+        return
+
+    # Interactive mode - review and learn
+    click.echo("\n🎓 Interactive Learning Mode")
+    click.echo("Review low-confidence issues and provide corrections.\n")
+
+    corrections = []
+    issue_types = ["outage", "defect", "enhancement", "inquiry", "routing_issue", "skip"]
+
+    for idx, item in enumerate(results["low_confidence"][:20], 1):  # Max 20
+        click.echo(f"\n[{idx}/{min(20, len(results['low_confidence']))}]")
+        click.echo(f"ID: {item['id']}")
+        click.echo(f"Current: {item['type']} (confidence: {item['confidence']:.2f})")
+        click.echo(f"Summary: {item['summary']}")
+
+        # Find full issue
+        full_issue = next(
+            (i for i in results["issues"] if i.get("id") == item["id"]), None
+        )
+
+        if not full_issue:
+            continue
+
+        click.echo(f"\nWhat should this be? ({'/'.join(issue_types)})")
+        correct_type = click.prompt("Type", type=click.Choice(issue_types), default="skip")
+
+        if correct_type == "skip":
+            continue
+
+        if correct_type == item["type"]:
+            click.echo("  (Same as current, skipping)")
+            continue
+
+        # Learn from this correction
+        learned = learn_from_correction(full_issue, correct_type, gathered_path)
+        click.echo(f"  ✓ Learned keywords: {', '.join(learned['keywords'][:3])}")
+
+        corrections.append(
+            {
+                "issue_id": item["id"],
+                "wrong_type": item["type"],
+                "correct_type": correct_type,
+                "learned_keywords": learned["keywords"],
+            }
+        )
+
+    if not corrections:
+        click.echo("\nNo corrections made")
+        return
+
+    # Apply learned patterns
+    click.echo(f"\n📝 Applying {len(corrections)} corrections...")
+    rules_path = Path(__file__).parent.parent.parent / "classify_rules.custom.yaml"
+    apply_learned_patterns(corrections, rules_path, context=context)
+
+    click.echo(f"✓ Updated {rules_path.name}")
+    if context:
+        click.echo(f"  Added patterns to context: {context}")
+    click.echo(f"  Saved {len(corrections)} corrections")
+    click.echo("\n  Re-run analyze to see improvements")

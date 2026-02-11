@@ -110,6 +110,13 @@ Classification categories (editable in [analyze/classify_rules.yaml](analyze/cla
 - `routing_issue` (weight 0.9): misrouted tickets
 - `inquiry` (weight 0.7): questions, documentation gaps
 
+**Custom Classification** ([CUSTOM_CLASSIFICATION.md](CUSTOM_CLASSIFICATION.md)): Team-specific terminology and domain knowledge via `classify_rules.custom.yaml`:
+- **Context-aware rules**: Different classification rules per source (e.g., "azure-platform", "support-team")
+- **Global overrides**: Force specific keywords to signal certain types with custom weights
+- **Manual corrections**: Override misclassified issues by ID (stored in corrections map)
+- **Keyword overrides**: Force-include or exclude specific keywords from NER extraction
+- Classifier automatically loads custom rules if file exists and merges with base rules
+
 ### dashboard/ - Linked Visualizations
 
 - **Store** ([dashboard/src/lib/store.ts](dashboard/src/lib/store.ts)): Svelte writable stores for global filter state (selected keywords, people, date ranges)

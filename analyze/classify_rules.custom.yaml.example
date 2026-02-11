@@ -1,0 +1,91 @@
+# Custom classification rules - team/domain-specific overrides
+#
+# This file extends classify_rules.yaml with team-specific terminology.
+# Copy this to classify_rules.custom.yaml to activate.
+#
+# Rules defined here:
+# - Override base rules with higher weights
+# - Add domain-specific keywords with non-obvious meanings
+# - Define context-specific classifications
+#
+# How weights work:
+# - Higher weight = more important signal
+# - Custom weights override base rule weights for matching keywords
+# - Use 2.0+ for strong domain-specific signals
+
+# Context-specific rules (optional)
+# Apply different rules based on source/team context
+contexts:
+  azure-platform:
+    # Azure-specific terminology that might not be obvious
+    outage:
+      weight: 2.5
+      keywords:
+        - arm  # Azure Resource Manager - often related to infrastructure issues
+        - deployment failed
+        - provisioning
+
+    defect:
+      weight: 1.5
+      keywords:
+        - sdk  # SDK issues are usually bugs, not questions
+        - client library
+
+    enhancement:
+      weight: 1.2
+      keywords:
+        - ga  # "GA" = General Availability feature request
+        - preview  # Feature in preview needing enhancement
+
+  support-team:
+    # Support team specific patterns
+    routing_issue:
+      weight: 3.0  # Very high - routing is critical for support
+      keywords:
+        - escalate
+        - tier 2
+        - needs pm
+        - platform team
+
+# Global custom keywords (apply to all contexts)
+# These override base rules regardless of context
+overrides:
+  outage:
+    keywords:
+      - pto  # "Planned Time Off" - team-specific meaning for scheduled downtime
+      - maintenance window
+
+  defect:
+    keywords:
+      - regression in  # Strong signal for bugs
+      - worked before
+
+  enhancement:
+    keywords:
+      - nice to have
+      - future consideration
+
+# Keyword corrections - fix misclassified keywords
+# Use this to override NER extraction for specific terms
+keyword_overrides:
+  # Force these to always be recognized as keywords
+  always_include:
+    - "Azure CLI"
+    - "Resource Manager"
+    - "Cosmos DB"
+    - "App Service"
+
+  # Never extract these as keywords (noise)
+  always_exclude:
+    - "GitHub"  # Too generic
+    - "Microsoft"  # Too generic
+    - "Team"  # Not useful
+
+# Manual corrections - track misclassifications for learning
+# Use this to build up domain knowledge over time
+corrections:
+  # Format: issue_id: correct_type
+  # Add entries here as you review dashboard and find mistakes
+  # Example:
+  # "Azure/azure-cli#12345": "defect"  # Was classified as inquiry
+  # "Azure/azure-sdk-for-python#67890": "enhancement"  # Was classified as defect

@@ -82,6 +82,54 @@ cd dashboard/
 bun run dev
 ```
 
+## Custom Classification
+
+The analyzer supports team-specific terminology and domain knowledge through custom rules. This is essential for handling words with non-obvious meanings in your context.
+
+### Quick Start
+
+```bash
+# Create custom rules file
+cp analyze/classify_rules.custom.yaml.example analyze/classify_rules.custom.yaml
+
+# Edit to add your team-specific terms
+vim analyze/classify_rules.custom.yaml
+
+# Re-run analysis
+npm run analyze
+```
+
+### Features
+
+- **Context-Aware Rules**: Different classification rules per source/team
+- **Global Overrides**: Force specific keywords to signal certain types
+- **Manual Corrections**: Override misclassified issues by ID
+- **Keyword Overrides**: Force-include or exclude specific keywords
+
+### Example Custom Rules
+
+```yaml
+# Team-specific terminology
+contexts:
+  azure-platform:
+    outage:
+      weight: 2.5
+      keywords:
+        - "arm"  # Azure Resource Manager - often infrastructure issues
+
+# Global overrides for all issues
+overrides:
+  outage:
+    keywords:
+      - "maintenance window"  # Your team's term for planned downtime
+
+# Manual corrections
+corrections:
+  "Azure/azure-cli#12345": "defect"  # Was wrongly classified as inquiry
+```
+
+**See [CUSTOM_CLASSIFICATION.md](CUSTOM_CLASSIFICATION.md) for detailed guide and examples.**
+
 ## JSON Schemas
 
 ### gathered.json

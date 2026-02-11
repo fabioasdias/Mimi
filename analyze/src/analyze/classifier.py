@@ -95,19 +95,44 @@ def extract_linguistic_features(nlp: Language, text: str) -> LinguisticFeatures:
 
 
 def load_semantic_rules(rules_path: Path | None = None) -> dict:
-    """Load semantic classification rules from YAML."""
+    """Load semantic classification rules from YAML.
+
+    Also loads custom rules from classify_rules.custom.yaml if it exists,
+    which allows for team-specific overrides and domain terminology.
+    """
     if rules_path is None:
         rules_path = Path(__file__).parent.parent.parent / "classify_rules.yaml"
 
     yaml_loader = YAML(typ="safe")
     with open(rules_path) as f:
-        return yaml_loader.load(f)
+        rules = yaml_loader.load(f)
+
+    # Try to load custom rules overlay
+    custom_path = rules_path.parent / "classify_rules.custom.yaml"
+    if custom_path.exists():
+        with open(custom_path) as f:
+            custom_rules = yaml_loader.load(f) or {}
+
+        # Store custom sections separately
+        rules["_contexts"] = custom_rules.get("contexts", {})
+        rules["_overrides"] = custom_rules.get("overrides", {})
+        rules["_keyword_overrides"] = custom_rules.get("keyword_overrides", {})
+        rules["_corrections"] = custom_rules.get("corrections", {})
+
+    return rules
 
 
 def classify_by_linguistic_features(
-    features: LinguisticFeatures, rules: dict, text: str
+    features: LinguisticFeatures, rules: dict, text: str, context: str | None = None
 ) -> dict[str, float]:
-    """Classify based on linguistic features and learned rules."""
+    """Classify based on linguistic features and learned rules.
+
+    Args:
+        features: Extracted linguistic features
+        rules: Classification rules (including custom overrides)
+        text: Full text to classify
+        context: Optional context name (e.g., source name) for context-specific rules
+    """
     scores: dict[str, float] = {
         "outage": 0.0,
         "defect": 0.0,
@@ -118,13 +143,42 @@ def classify_by_linguistic_features(
 
     text_lower = text.lower()
 
-    # Load keyword patterns from rules (for bootstrapping)
-    for category, config in rules.items():
-        if category not in scores:
-            continue
+    # Build merged rule set: base + context + overrides
+    merged_rules = {}
 
-        keywords = config.get("keywords", [])
-        weight = config.get("weight", 1.0)
+    # Start with base rules
+    for category in scores.keys():
+        if category in rules:
+            merged_rules[category] = {
+                "keywords": rules[category].get("keywords", []),
+                "weight": rules[category].get("weight", 1.0),
+            }
+
+    # Apply context-specific rules if context provided
+    if context and "_contexts" in rules:
+        contexts = rules["_contexts"]
+        if context in contexts:
+            for category, config in contexts[context].items():
+                if category in merged_rules:
+                    # Merge keywords and use context weight if higher
+                    merged_rules[category]["keywords"].extend(config.get("keywords", []))
+                    merged_rules[category]["weight"] = max(
+                        merged_rules[category]["weight"],
+                        config.get("weight", 1.0)
+                    )
+
+    # Apply global overrides (highest priority)
+    if "_overrides" in rules:
+        for category, config in rules["_overrides"].items():
+            if category in merged_rules:
+                merged_rules[category]["keywords"].extend(config.get("keywords", []))
+                if "weight" in config:
+                    merged_rules[category]["weight"] = config["weight"]
+
+    # Score based on merged rules
+    for category, config in merged_rules.items():
+        keywords = config["keywords"]
+        weight = config["weight"]
 
         for keyword in keywords:
             kw_lower = keyword.lower()
@@ -153,11 +207,17 @@ def classify_by_linguistic_features(
     return scores
 
 
-def extract_keywords_and_products(features: LinguisticFeatures) -> list[str]:
+def extract_keywords_and_products(
+    features: LinguisticFeatures, rules: dict | None = None
+) -> list[str]:
     """Extract keyword and product names using spaCy NER.
 
     Relies on spaCy's trained model to identify ORG and PRODUCT entities,
     then filters out obvious non-keywords (code snippets, fragments, etc.).
+
+    Args:
+        features: Linguistic features with NER entities
+        rules: Optional rules dict with keyword overrides
     """
     keywords: set[str] = set()
 
@@ -165,6 +225,19 @@ def extract_keywords_and_products(features: LinguisticFeatures) -> list[str]:
     for ent_type in ("ORG", "PRODUCT"):
         if ent_type in features.entities:
             keywords.update(features.entities[ent_type])
+
+    # Apply keyword overrides if available
+    if rules and "_keyword_overrides" in rules:
+        overrides = rules["_keyword_overrides"]
+
+        # Always include specified keywords
+        if "always_include" in overrides:
+            keywords.update(overrides["always_include"])
+
+        # Always exclude specified keywords
+        if "always_exclude" in overrides:
+            exclude_set = set(overrides["always_exclude"])
+            keywords = keywords - exclude_set
 
     # Filter out obvious garbage that spaCy incorrectly tagged
     filtered = set()
@@ -214,6 +287,8 @@ def classify_issue(
     title: str,
     conversation_text: str,
     nlp: Language | None = None,
+    issue_id: str | None = None,
+    context: str | None = None,
 ) -> Classification:
     """Classify an issue using NLP linguistic features.
 
@@ -221,6 +296,8 @@ def classify_issue(
         title: Issue title
         conversation_text: Full conversation content
         nlp: Optional spaCy model (will load if not provided)
+        issue_id: Optional issue ID to check for manual corrections
+        context: Optional context name (e.g., source) for context-specific rules
 
     Returns:
         Classification with type, confidence, and extracted keywords
@@ -228,14 +305,29 @@ def classify_issue(
     if nlp is None:
         nlp = load_nlp()
 
+    # Load rules (including custom rules if they exist)
+    rules = load_semantic_rules()
+
+    # Check if this issue has a manual correction
+    if issue_id and "_corrections" in rules:
+        corrections = rules["_corrections"]
+        if issue_id in corrections:
+            corrected_type = corrections[issue_id]
+            # Return corrected classification with max confidence
+            return Classification(
+                type=corrected_type,
+                confidence=0.99,  # High confidence for manual corrections
+                keywords=[],  # Will be extracted below
+                summary=title[:200],
+            )
+
     full_text = f"{title}\n{conversation_text}"
 
     # Extract linguistic features
     features = extract_linguistic_features(nlp, full_text)
 
-    # Load rules and classify
-    rules = load_semantic_rules()
-    scores = classify_by_linguistic_features(features, rules, full_text)
+    # Classify using context-aware rules
+    scores = classify_by_linguistic_features(features, rules, full_text, context=context)
 
     # If no clear pattern, default to inquiry with low confidence
     if max(scores.values()) == 0:
@@ -251,8 +343,8 @@ def classify_issue(
     total_score = sum(scores.values())
     confidence = min(scores[best_category] / total_score, 0.99)
 
-    # Extract keywords
-    keywords = extract_keywords_and_products(features)
+    # Extract keywords with overrides applied
+    keywords = extract_keywords_and_products(features, rules)
 
     return Classification(
         type=best_category,
