@@ -5,7 +5,7 @@
 export interface Classification {
   type: string;
   confidence: number;
-  services: string[];
+  keywords: string[];
   summary: string;
 }
 
@@ -40,20 +40,20 @@ export interface PeopleGraph {
   edges: GraphEdge[];
 }
 
-export interface ServiceNode {
+export interface KeywordNode {
   id: string;
   issue_count: number;
 }
 
-export interface ServiceEdge {
+export interface KeywordEdge {
   from: string;
   to: string;
   co_occurrence: number;
 }
 
-export interface ServiceGraph {
-  nodes: ServiceNode[];
-  edges: ServiceEdge[];
+export interface KeywordGraph {
+  nodes: KeywordNode[];
+  edges: KeywordEdge[];
 }
 
 export interface AnalysisMetadata {
@@ -64,6 +64,6 @@ export interface AnalysisMetadata {
 export interface AnalyzedData {
   issues: IssueAnalysis[];
   people_graph: PeopleGraph;
-  service_graph: ServiceGraph;
+  keyword_graph: KeywordGraph;
   metadata: AnalysisMetadata;
 }

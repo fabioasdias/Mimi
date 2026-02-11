@@ -1,6 +1,6 @@
-"""Service and component entity extraction.
+"""Keyword and component entity extraction.
 
-Uses spaCy NER plus custom pattern matching for known service names.
+Uses spaCy NER plus custom pattern matching for known keyword names.
 """
 
 import re
@@ -8,8 +8,8 @@ import re
 import spacy
 from spacy.language import Language
 
-# Common infrastructure/service patterns
-SERVICE_PATTERNS = [
+# Common infrastructure/keyword patterns
+KEYWORD_PATTERNS = [
     re.compile(r"\b(\w+-service)\b", re.IGNORECASE),
     re.compile(r"\b(\w+-api)\b", re.IGNORECASE),
     re.compile(r"\b(\w+-gateway)\b", re.IGNORECASE),
@@ -19,8 +19,8 @@ SERVICE_PATTERNS = [
     re.compile(r"\b(\w+-cache)\b", re.IGNORECASE),
 ]
 
-# Stopwords to filter out false positive service matches
-STOP_SERVICES = {
+# Stopwords to filter out false positive keyword matches
+STOP_KEYWORDS = {
     "the-service",
     "a-service",
     "this-service",
@@ -42,34 +42,34 @@ def load_nlp() -> Language:
         return spacy.load("en_core_web_sm")
 
 
-def extract_services(
-    text: str, known_services: set[str] | None = None
+def extract_keywords(
+    text: str, known_keywords: set[str] | None = None
 ) -> list[str]:
-    """Extract service/component names from text.
+    """Extract keyword/component names from text.
 
-    Combines regex pattern matching with optional known service list.
+    Combines regex pattern matching with optional known keyword list.
     """
-    services: set[str] = set()
+    keywords: set[str] = set()
 
     # Pattern-based extraction
-    for pattern in SERVICE_PATTERNS:
+    for pattern in KEYWORD_PATTERNS:
         for match in pattern.finditer(text):
             name = match.group(1).lower()
-            if name not in STOP_SERVICES:
-                services.add(name)
+            if name not in STOP_KEYWORDS:
+                keywords.add(name)
 
-    # Match against known services if provided
-    if known_services:
+    # Match against known keywords if provided
+    if known_keywords:
         text_lower = text.lower()
-        for svc in known_services:
-            if svc.lower() in text_lower:
-                services.add(svc.lower())
+        for kw in known_keywords:
+            if kw.lower() in text_lower:
+                keywords.add(kw.lower())
 
-    return sorted(services)
+    return sorted(keywords)
 
 
-def extract_services_spacy(nlp: Language, text: str) -> list[str]:
-    """Use spaCy NER to find organization/product entities as potential services."""
+def extract_keywords_spacy(nlp: Language, text: str) -> list[str]:
+    """Use spaCy NER to find organization/product entities as potential keywords."""
     doc = nlp(text)
     entities: set[str] = set()
 

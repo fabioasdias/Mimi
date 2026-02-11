@@ -166,7 +166,7 @@
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statTotalServices">0</div>
-            <div class="stat-label">Services</div>
+            <div class="stat-label">Keywords</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statTopCount">0</div>
@@ -174,7 +174,7 @@
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statQuestions">0</div>
-            <div class="stat-label">Questions</div>
+            <div class="stat-label">Inquiries</div>
           </div>
         </div>
 
@@ -184,6 +184,15 @@
           </div>
           <div class="chart-card">
             <div id="classificationBreakdown"></div>
+          </div>
+          <div class="chart-card full-width">
+            <div id="keywordTypeMatrix"></div>
+          </div>
+          <div class="chart-card full-width">
+            <div id="keywordCooccurrence"></div>
+          </div>
+          <div class="chart-card full-width">
+            <div id="peopleKeywordMatrix"></div>
           </div>
           <div class="chart-card full-width">
             <div id="documentationGaps"></div>
@@ -224,7 +233,7 @@
 
           // Update stats
           const totalIssues = analyzed.issues.length;
-          const totalServices = analyzed.service_graph.nodes.length;
+          const totalKeywords = analyzed.keyword_graph.nodes.length;
           const classificationCounts = analyzed.issues.reduce((acc: any, issue: any) => {
             acc[issue.classification.type] = (acc[issue.classification.type] || 0) + 1;
             return acc;
@@ -235,33 +244,57 @@
           document.getElementById('totalIssues')!.textContent = String(totalIssues);
           document.getElementById('lastUpdated')!.textContent = new Date(analyzed.metadata.analyzed_at).toLocaleString();
           document.getElementById('statTotalIssues')!.textContent = String(totalIssues);
-          document.getElementById('statTotalServices')!.textContent = String(totalServices);
+          document.getElementById('statTotalServices')!.textContent = String(totalKeywords);
           document.getElementById('statTopCount')!.textContent = topClassification ? String(topClassification[1]) : '0';
           document.getElementById('statTopLabel')!.textContent = `Top: ${topClassification ? topClassification[0] : 'N/A'}`;
-          document.getElementById('statQuestions')!.textContent = String(classificationCounts.question || 0);
+          document.getElementById('statQuestions')!.textContent = String(classificationCounts.inquiry || 0);
 
           // Dynamically import and mount components
           const [
-            { default: ServiceVolumeChart },
+            { default: KeywordVolumeChart },
             { default: ClassificationBreakdown },
+            { default: KeywordTypeMatrix },
+            { default: KeywordCooccurrence },
+            { default: PeopleKeywordMatrix },
             { default: DocumentationGaps },
             { default: PeopleActivity }
           ] = await Promise.all([
-            import('../components/ServiceVolumeChart.svelte'),
+            import('../components/KeywordVolumeChart.svelte'),
             import('../components/ClassificationBreakdown.svelte'),
+            import('../components/KeywordTypeMatrix.svelte'),
+            import('../components/KeywordCooccurrence.svelte'),
+            import('../components/PeopleKeywordMatrix.svelte'),
             import('../components/DocumentationGaps.svelte'),
             import('../components/PeopleActivity.svelte')
           ]);
 
           // Render charts
-          mount(ServiceVolumeChart, {
+          mount(KeywordVolumeChart, {
             target: document.getElementById('serviceVolumeChart')!,
-            props: { serviceGraph: analyzed.service_graph }
+            props: { keywordGraph: analyzed.keyword_graph }
           });
 
           mount(ClassificationBreakdown, {
             target: document.getElementById('classificationBreakdown')!,
             props: { issues: analyzed.issues }
+          });
+
+          mount(KeywordTypeMatrix, {
+            target: document.getElementById('keywordTypeMatrix')!,
+            props: { issues: analyzed.issues }
+          });
+
+          mount(KeywordCooccurrence, {
+            target: document.getElementById('keywordCooccurrence')!,
+            props: { keywordGraph: analyzed.keyword_graph }
+          });
+
+          mount(PeopleKeywordMatrix, {
+            target: document.getElementById('peopleKeywordMatrix')!,
+            props: {
+              issues: analyzed.issues,
+              peopleGraph: analyzed.people_graph
+            }
           });
 
           mount(DocumentationGaps, {

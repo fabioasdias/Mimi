@@ -110,11 +110,11 @@ def classify_by_linguistic_features(
     """Classify based on linguistic features and learned rules."""
     scores: dict[str, float] = {
         "outage": 0.0,
-        "bug": 0.0,
-        "new_feature": 0.0,
-        "user_error": 0.0,
-        "question": 0.0,
-        "wrong_team": 0.0,
+        "defect": 0.0,
+        "enhancement": 0.0,
+        "clarification": 0.0,
+        "inquiry": 0.0,
+        "routing_issue": 0.0,
     }
 
     text_lower = text.lower()
@@ -141,73 +141,73 @@ def classify_by_linguistic_features(
 
     # Boost feature requests if modal present (only if no strong matches elsewhere)
     if features.has_modal and max(scores.values()) < 2.0:
-        scores["new_feature"] += 1.5
+        scores["enhancement"] += 1.5
 
     # Boost questions if question markers present
     if features.has_question:
-        scores["question"] += 1.5
-        scores["user_error"] += 1.0
+        scores["inquiry"] += 1.5
+        scores["clarification"] += 1.0
 
-    # Negation + action verbs often indicate bugs (only if no strong wrong_team signal)
-    if features.has_negation and features.verb_lemmas and scores["wrong_team"] < 1.0:
-        scores["bug"] += 1.0
+    # Negation + action verbs often indicate bugs (only if no strong routing_issue signal)
+    if features.has_negation and features.verb_lemmas and scores["routing_issue"] < 1.0:
+        scores["defect"] += 1.0
 
     return scores
 
 
-def extract_services_and_products(features: LinguisticFeatures) -> list[str]:
-    """Extract service and product names using spaCy NER.
+def extract_keywords_and_products(features: LinguisticFeatures) -> list[str]:
+    """Extract keyword and product names using spaCy NER.
 
     Relies on spaCy's trained model to identify ORG and PRODUCT entities,
-    then filters out obvious non-services (code snippets, fragments, etc.).
+    then filters out obvious non-keywords (code snippets, fragments, etc.).
     """
-    services: set[str] = set()
+    keywords: set[str] = set()
 
     # Collect ORG and PRODUCT entities from spaCy NER
     for ent_type in ("ORG", "PRODUCT"):
         if ent_type in features.entities:
-            services.update(features.entities[ent_type])
+            keywords.update(features.entities[ent_type])
 
     # Filter out obvious garbage that spaCy incorrectly tagged
     filtered = set()
-    for service in services:
+    for keyword in keywords:
 
         # Skip if contains newlines, tabs, or other control characters
-        if any(ord(c) < 32 for c in service if c != ' '):
+        if any(ord(c) < 32 for c in keyword if c != ' '):
             continue
 
         # Skip if contains code-like characters
         code_chars = ["(", ")", "{", "}", "[", "]", "<", ">", ".", "/", "\\", "&", "+", "*", "="]
-        if any(char in service for char in code_chars):
+        if any(char in keyword for char in code_chars):
             continue
 
         # Skip if contains URL fragments
-        if "http" in service.lower() or "://" in service:
+        if "http" in keyword.lower() or "://" in keyword:
             continue
 
         # Skip if starts/ends with quotes or special punctuation
-        if service and (service[0] in ["'", '"', "`", "#"] or service[-1] in ["'", '"', "`"]):
+        if keyword and (keyword[0] in ["'", '"', "`", "#"] or keyword[-1] in ["'", '"', "`"]):
             continue
 
         # Skip if it's mostly non-alphabetic (code/variables tend to have numbers/symbols)
-        alpha_count = sum(c.isalpha() or c.isspace() for c in service)
-        if len(service) > 0 and alpha_count / len(service) < 0.75:
+        alpha_count = sum(c.isalpha() or c.isspace() for c in keyword)
+        if len(keyword) > 0 and alpha_count / len(keyword) < 0.75:
             continue
 
         # Skip obvious variable names (all lowercase single word)
-        if " " not in service and service.islower():
+        if " " not in keyword and keyword.islower():
             continue
 
         # Skip camelCase variable names (has lowercase then uppercase in middle)
-        if " " not in service and len(service) > 1:
+        if " " not in keyword and len(keyword) > 1:
             has_camel = any(
-                service[i].islower() and service[i + 1].isupper()
-                for i in range(len(service) - 1)
+                keyword[i].islower() and keyword[i + 1].isupper()
+                for i in range(len(keyword) - 1)
             )
             if has_camel:
                 continue
 
-        filtered.add(service)
+        filtered.add(keyword)
 
     return sorted(filtered)[:10]
 
@@ -225,7 +225,7 @@ def classify_issue(
         nlp: Optional spaCy model (will load if not provided)
 
     Returns:
-        Classification with type, confidence, and extracted services
+        Classification with type, confidence, and extracted keywords
     """
     if nlp is None:
         nlp = load_nlp()
@@ -239,12 +239,12 @@ def classify_issue(
     rules = load_semantic_rules()
     scores = classify_by_linguistic_features(features, rules, full_text)
 
-    # If no clear pattern, default to question with low confidence
+    # If no clear pattern, default to inquiry with low confidence
     if max(scores.values()) == 0:
         return Classification(
-            type="question",
+            type="inquiry",
             confidence=0.3,
-            services=[],
+            keywords=[],
             summary=title[:200],
         )
 
@@ -253,12 +253,12 @@ def classify_issue(
     total_score = sum(scores.values())
     confidence = min(scores[best_category] / total_score, 0.99)
 
-    # Extract services
-    services = extract_services_and_products(features)
+    # Extract keywords
+    keywords = extract_keywords_and_products(features)
 
     return Classification(
         type=best_category,
         confidence=round(confidence, 2),
-        services=services,
+        keywords=keywords,
         summary=title[:200],
     )

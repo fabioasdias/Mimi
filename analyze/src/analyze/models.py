@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 class Classification(BaseModel):
     """Issue classification result."""
 
-    type: str  # outage, new_feature, user_error, wrong_team, bug, question
+    type: str  # outage, enhancement, clarification, routing_issue, defect, inquiry
     confidence: float = Field(ge=0.0, le=1.0)
-    services: list[str] = []
+    keywords: list[str] = []
     summary: str
 
 
@@ -68,15 +68,15 @@ class PeopleGraph(BaseModel):
     edges: list[GraphEdge]
 
 
-class ServiceNode(BaseModel):
-    """A service/component node."""
+class KeywordNode(BaseModel):
+    """A keyword/component node."""
 
     id: str
     issue_count: int = 0
 
 
-class ServiceEdge(BaseModel):
-    """Co-occurrence edge between services."""
+class KeywordEdge(BaseModel):
+    """Co-occurrence edge between keywords."""
 
     source: str = Field(alias="from")
     target: str = Field(alias="to")
@@ -85,11 +85,11 @@ class ServiceEdge(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class ServiceGraph(BaseModel):
-    """Graph of services and their co-occurrences."""
+class KeywordGraph(BaseModel):
+    """Graph of keywords and their co-occurrences."""
 
-    nodes: list[ServiceNode]
-    edges: list[ServiceEdge]
+    nodes: list[KeywordNode]
+    edges: list[KeywordEdge]
 
 
 class AnalysisMetadata(BaseModel):
@@ -104,5 +104,5 @@ class AnalyzedData(BaseModel):
 
     issues: list[IssueAnalysis]
     people_graph: PeopleGraph
-    service_graph: ServiceGraph
+    keyword_graph: KeywordGraph
     metadata: AnalysisMetadata

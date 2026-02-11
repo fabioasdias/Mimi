@@ -1,7 +1,7 @@
 """Identity resolution and people graph building.
 
 Correlates people across sources by email (exact) and display name (fuzzy).
-Builds a networkx graph of people ↔ issues ↔ services.
+Builds a networkx graph of people ↔ issues ↔ keywords.
 """
 
 from uuid import uuid4
@@ -14,9 +14,9 @@ from analyze.models import (
     Identity,
     PeopleGraph,
     PersonNode,
-    ServiceEdge,
-    ServiceGraph,
-    ServiceNode,
+    KeywordEdge,
+    KeywordGraph,
+    KeywordNode,
     IssueAnalysis,
 )
 
@@ -172,31 +172,31 @@ def resolve_identities(
     return PeopleGraph(nodes=nodes, edges=edges), key_to_node_id
 
 
-def build_service_graph(analyses: list[IssueAnalysis]) -> ServiceGraph:
-    """Build a co-occurrence graph of services from issue analyses."""
+def build_keyword_graph(analyses: list[IssueAnalysis]) -> KeywordGraph:
+    """Build a co-occurrence graph of keywords from issue analyses."""
     g = nx.Graph()
 
     for analysis in analyses:
-        services = analysis.classification.services
-        for svc in services:
-            if not g.has_node(svc):
-                g.add_node(svc, issue_count=0)
-            g.nodes[svc]["issue_count"] += 1
+        keywords = analysis.classification.keywords
+        for kw in keywords:
+            if not g.has_node(kw):
+                g.add_node(kw, issue_count=0)
+            g.nodes[kw]["issue_count"] += 1
 
         # Add co-occurrence edges
-        for i, svc_a in enumerate(services):
-            for svc_b in services[i + 1 :]:
-                if g.has_edge(svc_a, svc_b):
-                    g[svc_a][svc_b]["co_occurrence"] += 1
+        for i, kw_a in enumerate(keywords):
+            for kw_b in keywords[i + 1 :]:
+                if g.has_edge(kw_a, kw_b):
+                    g[kw_a][kw_b]["co_occurrence"] += 1
                 else:
-                    g.add_edge(svc_a, svc_b, co_occurrence=1)
+                    g.add_edge(kw_a, kw_b, co_occurrence=1)
 
     nodes = [
-        ServiceNode(id=n, issue_count=g.nodes[n].get("issue_count", 0))
+        KeywordNode(id=n, issue_count=g.nodes[n].get("issue_count", 0))
         for n in g.nodes
     ]
     edges = [
-        ServiceEdge(
+        KeywordEdge(
             **{
                 "from": u,
                 "to": v,
@@ -206,4 +206,4 @@ def build_service_graph(analyses: list[IssueAnalysis]) -> ServiceGraph:
         for u, v, d in g.edges(data=True)
     ]
 
-    return ServiceGraph(nodes=nodes, edges=edges)
+    return KeywordGraph(nodes=nodes, edges=edges)

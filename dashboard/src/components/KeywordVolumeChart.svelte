@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
-  import type { ServiceGraph } from '../lib/types';
+  import type { KeywordGraph } from '../lib/types';
 
   interface Props {
-    serviceGraph: ServiceGraph;
+    keywordGraph: KeywordGraph;
   }
 
-  let { serviceGraph }: Props = $props();
+  let { keywordGraph }: Props = $props();
   let container: HTMLDivElement;
 
   onMount(() => {
@@ -15,8 +15,8 @@
     const width = 800 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
-    // Sort services by issue count
-    const sortedServices = [...serviceGraph.nodes]
+    // Sort keywords by issue count
+    const sortedKeywords = [...keywordGraph.nodes]
       .sort((a, b) => b.issue_count - a.issue_count)
       .slice(0, 15); // Top 15
 
@@ -28,17 +28,17 @@
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     const x = d3.scaleLinear()
-      .domain([0, d3.max(sortedServices, d => d.issue_count) || 0])
+      .domain([0, d3.max(sortedKeywords, d => d.issue_count) || 0])
       .range([0, width]);
 
     const y = d3.scaleBand()
-      .domain(sortedServices.map(d => d.id))
+      .domain(sortedKeywords.map(d => d.id))
       .range([0, height])
       .padding(0.2);
 
     // Bars
     svg.selectAll('rect')
-      .data(sortedServices)
+      .data(sortedKeywords)
       .join('rect')
       .attr('x', 0)
       .attr('y', d => y(d.id)!)
@@ -49,7 +49,7 @@
 
     // Labels
     svg.selectAll('text.label')
-      .data(sortedServices)
+      .data(sortedKeywords)
       .join('text')
       .attr('class', 'label')
       .attr('x', d => x(d.issue_count) + 5)
@@ -72,7 +72,7 @@
       .attr('text-anchor', 'middle')
       .attr('font-size', '16px')
       .attr('font-weight', 'bold')
-      .text('Issues by Service (Top 15)');
+      .text('Issues by Keyword (Top 15)');
   });
 </script>
 

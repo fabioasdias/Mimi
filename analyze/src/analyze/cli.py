@@ -6,9 +6,9 @@ from pathlib import Path
 import click
 
 from analyze.classifier import classify_issue
-from analyze.entities import extract_services, extract_services_spacy, load_nlp
+from analyze.entities import extract_keywords, extract_keywords_spacy, load_nlp
 from analyze.models import AnalysisMetadata, AnalyzedData, IssueAnalysis, IssuePerson
-from analyze.people import build_service_graph, resolve_identities
+from analyze.people import build_keyword_graph, resolve_identities
 from analyze.suggest import suggest_rules
 
 
@@ -28,19 +28,19 @@ from analyze.suggest import suggest_rules
     help="Output JSON file path",
 )
 @click.option(
-    "--services",
+    "--keywords",
     multiple=True,
-    help="Known service names to look for (can be repeated)",
+    help="Known keyword names to look for (can be repeated)",
 )
 @click.option(
     "--use-spacy-ner/--no-spacy-ner",
     default=False,
-    help="Use spaCy NER for service extraction (slower)",
+    help="Use spaCy NER for keyword extraction (slower)",
 )
 def main(
     input_path: Path,
     output_path: Path,
-    services: tuple[str, ...],
+    keywords: tuple[str, ...],
     use_spacy_ner: bool,
 ) -> None:
     """Analyze consolidated support issues with NLP."""
@@ -50,7 +50,7 @@ def main(
 
     click.echo(f"Analyzing {len(issues)} issues...")
 
-    known_services = set(services) if services else None
+    known_keywords = set(keywords) if keywords else None
     nlp = load_nlp() if use_spacy_ner else None
 
     # Load NLP model once for all classifications
@@ -67,16 +67,16 @@ def main(
         # Classify using NLP (which also extracts entities)
         classification = classify_issue(title, conversation_text, classifier_nlp)
 
-        # Enhance with additional service extraction
+        # Enhance with additional keyword extraction
         full_text = f"{title}\n{conversation_text}"
-        found_services = extract_services(full_text, known_services)
+        found_keywords = extract_keywords(full_text, known_keywords)
         if use_spacy_ner and nlp:
-            spacy_services = extract_services_spacy(nlp, full_text)
-            found_services = sorted(set(found_services) | set(spacy_services))
+            spacy_keywords = extract_keywords_spacy(nlp, full_text)
+            found_keywords = sorted(set(found_keywords) | set(spacy_keywords))
 
-        # Merge classifier's extracted entities with explicit service extraction
-        all_services = sorted(set(classification.services) | set(found_services))
-        classification.services = all_services
+        # Merge classifier's extracted entities with explicit keyword extraction
+        all_keywords = sorted(set(classification.keywords) | set(found_keywords))
+        classification.keywords = all_keywords
 
         # Extract people data from the issue
         people = [
@@ -107,18 +107,18 @@ def main(
         f"with {len(people_graph.edges)} relationships"
     )
 
-    # Build service co-occurrence graph
-    service_graph = build_service_graph(analyses)
+    # Build keyword co-occurrence graph
+    keyword_graph = build_keyword_graph(analyses)
     click.echo(
-        f"Found {len(service_graph.nodes)} services "
-        f"with {len(service_graph.edges)} co-occurrences"
+        f"Found {len(keyword_graph.nodes)} keywords "
+        f"with {len(keyword_graph.edges)} co-occurrences"
     )
 
     # Write output
     data = AnalyzedData(
         issues=analyses,
         people_graph=people_graph,
-        service_graph=service_graph,
+        keyword_graph=keyword_graph,
         metadata=AnalysisMetadata(),
     )
 

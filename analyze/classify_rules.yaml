@@ -22,7 +22,7 @@ outage:
     - sev0
     - emergency
 
-bug:
+defect:
   weight: 0.8
   keywords:
     - bug
@@ -41,7 +41,7 @@ bug:
     - stacktrace
     - stack trace
 
-new_feature:
+enhancement:
   weight: 0.9
   keywords:
     - feature request
@@ -56,7 +56,7 @@ new_feature:
     - roadmap
     - improvement
 
-user_error:
+clarification:
   weight: 0.7
   keywords:
     - how do i
@@ -71,7 +71,7 @@ user_error:
     - is it possible
     - tutorial
 
-wrong_team:
+routing_issue:
   weight: 0.9
   keywords:
     - wrong team
@@ -85,7 +85,7 @@ wrong_team:
     - transferred
     - not responsible
 
-question:
+inquiry:
   weight: 0.6
   keywords:
     - question

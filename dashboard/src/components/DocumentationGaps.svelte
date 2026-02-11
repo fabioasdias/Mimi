@@ -15,33 +15,33 @@
     const width = 800 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
-    // Filter for documentation-related issues (questions and user errors)
+    // Filter for documentation-related issues (inquiries and clarifications)
     const docIssues = issues.filter(
-      i => i.classification.type === 'question' || i.classification.type === 'user_error'
+      i => i.classification.type === 'inquiry' || i.classification.type === 'clarification'
     );
 
-    // Count by service
-    const serviceMap = new Map<string, {questions: number; userErrors: number}>();
+    // Count by keyword
+    const keywordMap = new Map<string, {inquiries: number; clarifications: number}>();
 
     docIssues.forEach(issue => {
-      issue.classification.services.forEach(service => {
-        if (!serviceMap.has(service)) {
-          serviceMap.set(service, { questions: 0, userErrors: 0 });
+      issue.classification.keywords.forEach(keyword => {
+        if (!keywordMap.has(keyword)) {
+          keywordMap.set(keyword, { inquiries: 0, clarifications: 0 });
         }
-        const counts = serviceMap.get(service)!;
-        if (issue.classification.type === 'question') {
-          counts.questions++;
+        const counts = keywordMap.get(keyword)!;
+        if (issue.classification.type === 'inquiry') {
+          counts.inquiries++;
         } else {
-          counts.userErrors++;
+          counts.clarifications++;
         }
       });
     });
 
-    const data = Array.from(serviceMap, ([service, counts]) => ({
-      service,
-      questions: counts.questions,
-      userErrors: counts.userErrors,
-      total: counts.questions + counts.userErrors
+    const data = Array.from(keywordMap, ([keyword, counts]) => ({
+      keyword,
+      inquiries: counts.inquiries,
+      clarifications: counts.clarifications,
+      total: counts.inquiries + counts.clarifications
     }))
       .filter(d => d.total > 0)
       .sort((a, b) => b.total - a.total)
@@ -64,32 +64,32 @@
       .range([0, width]);
 
     const y = d3.scaleBand()
-      .domain(data.map(d => d.service))
+      .domain(data.map(d => d.keyword))
       .range([0, height])
       .padding(0.3);
 
     const barHeight = y.bandwidth();
 
-    // User errors (darker)
-    svg.selectAll('rect.user-error')
+    // Clarifications (darker)
+    svg.selectAll('rect.clarification')
       .data(data)
       .join('rect')
-      .attr('class', 'user-error')
+      .attr('class', 'clarification')
       .attr('x', 0)
-      .attr('y', d => y(d.service)!)
-      .attr('width', d => x(d.userErrors))
+      .attr('y', d => y(d.keyword)!)
+      .attr('width', d => x(d.clarifications))
       .attr('height', barHeight)
       .attr('fill', '#dc2626')
       .attr('rx', 4);
 
-    // Questions (lighter, stacked)
-    svg.selectAll('rect.question')
+    // Inquiries (lighter, stacked)
+    svg.selectAll('rect.inquiry')
       .data(data)
       .join('rect')
-      .attr('class', 'question')
-      .attr('x', d => x(d.userErrors))
-      .attr('y', d => y(d.service)!)
-      .attr('width', d => x(d.questions))
+      .attr('class', 'inquiry')
+      .attr('x', d => x(d.clarifications))
+      .attr('y', d => y(d.keyword)!)
+      .attr('width', d => x(d.inquiries))
       .attr('height', barHeight)
       .attr('fill', '#f97316')
       .attr('rx', 4);
@@ -100,7 +100,7 @@
       .join('text')
       .attr('class', 'total')
       .attr('x', d => x(d.total) + 5)
-      .attr('y', d => y(d.service)! + barHeight / 2)
+      .attr('y', d => y(d.keyword)! + barHeight / 2)
       .attr('dy', '0.35em')
       .text(d => d.total)
       .attr('font-size', '12px')
@@ -119,7 +119,7 @@
       .attr('text-anchor', 'middle')
       .attr('font-size', '16px')
       .attr('font-weight', 'bold')
-      .text('Documentation Gaps (Questions + User Errors)');
+      .text('Documentation Gaps (Inquiries + Clarifications)');
 
     // Legend
     const legend = svg.append('g')
@@ -136,7 +136,7 @@
       .attr('y', 6)
       .attr('dy', '0.35em')
       .attr('font-size', '11px')
-      .text('User Errors');
+      .text('Clarifications');
 
     legend.append('rect')
       .attr('y', 20)
@@ -150,7 +150,7 @@
       .attr('y', 26)
       .attr('dy', '0.35em')
       .attr('font-size', '11px')
-      .text('Questions');
+      .text('Inquiries');
   });
 </script>
 
