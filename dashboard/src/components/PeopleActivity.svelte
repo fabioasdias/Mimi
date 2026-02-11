@@ -116,8 +116,8 @@
       .range([0, width]);
 
     const color = d3.scaleOrdinal<string>()
-      .domain(['defect', 'inquiry', 'clarification', 'outage', 'enhancement', 'routing_issue'])
-      .range(['#ef4444', '#f59e0b', '#f97316', '#dc2626', '#10b981', '#6b7280']);
+      .domain(['defect', 'inquiry', 'clarification', 'outage', 'enhancement', 'routing_issue', 'action'])
+      .range(['#ef4444', '#f59e0b', '#f97316', '#dc2626', '#10b981', '#6b7280', '#ec4899']);
 
     // Stacked bars
     data.forEach(person => {
@@ -170,7 +170,7 @@
     const legend = svg.append('g')
       .attr('transform', `translate(${width + 20}, ${height / 2 - 50})`);
 
-    const types = ['defect', 'inquiry', 'clarification', 'outage', 'enhancement', 'routing_issue'];
+    const types = ['defect', 'inquiry', 'clarification', 'outage', 'enhancement', 'routing_issue', 'action'];
     types.forEach((type, i) => {
       const g = legend.append('g')
         .attr('transform', `translate(0, ${i * 18})`);

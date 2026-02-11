@@ -19,6 +19,7 @@
     enhancement: '#10b981', // green
     inquiry: '#3b82f6',     // blue
     routing_issue: '#8b5cf6', // purple
+    action: '#ec4899',      // pink
   };
 
   // Subscribe to filters and trigger update

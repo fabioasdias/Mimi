@@ -107,6 +107,10 @@ def load_semantic_rules(rules_path: Path | None = None) -> dict:
     with open(rules_path) as f:
         rules = yaml_loader.load(f)
 
+    # Extract config section (e.g., similarity_threshold)
+    config = rules.pop("config", {})
+    rules["_config"] = config
+
     # Try to load custom rules overlay
     custom_path = rules_path.parent / "classify_rules.custom.yaml"
     if custom_path.exists():
@@ -119,19 +123,30 @@ def load_semantic_rules(rules_path: Path | None = None) -> dict:
         rules["_keyword_overrides"] = custom_rules.get("keyword_overrides", {})
         rules["_corrections"] = custom_rules.get("corrections", {})
 
+        # Merge custom config if present
+        if "config" in custom_rules:
+            rules["_config"].update(custom_rules["config"])
+
     return rules
 
 
 def classify_by_linguistic_features(
-    features: LinguisticFeatures, rules: dict, text: str, context: str | None = None
+    features: LinguisticFeatures,
+    rules: dict,
+    text: str,
+    context: str | None = None,
+    nlp: Language | None = None,
+    similarity_threshold: float = 0.5,
 ) -> dict[str, float]:
-    """Classify based on linguistic features and learned rules.
+    """Classify based on linguistic features and learned rules with semantic similarity.
 
     Args:
         features: Extracted linguistic features
         rules: Classification rules (including custom overrides)
         text: Full text to classify
         context: Optional context name (e.g., source name) for context-specific rules
+        nlp: Optional spaCy model with word vectors for similarity matching
+        similarity_threshold: Minimum similarity score for fuzzy keyword matching (default 0.7)
     """
     scores: dict[str, float] = {
         "outage": 0.0,
@@ -139,6 +154,7 @@ def classify_by_linguistic_features(
         "enhancement": 0.0,
         "inquiry": 0.0,
         "routing_issue": 0.0,
+        "action": 0.0,
     }
 
     text_lower = text.lower()
@@ -175,6 +191,15 @@ def classify_by_linguistic_features(
                 if "weight" in config:
                     merged_rules[category]["weight"] = config["weight"]
 
+    # Check if we have word vectors available for similarity matching
+    has_vectors = nlp is not None and nlp.vocab.vectors_length > 0
+
+    # Build token cache for similarity checks (if vectors available)
+    text_tokens = {}
+    if has_vectors:
+        doc = nlp(text.lower())
+        text_tokens = {token.lemma_: token for token in doc if token.has_vector}
+
     # Score based on merged rules
     for category, config in merged_rules.items():
         keywords = config["keywords"]
@@ -182,15 +207,35 @@ def classify_by_linguistic_features(
 
         for keyword in keywords:
             kw_lower = keyword.lower()
-            # Check multi-word phrases in original text
+            matched = False
+
+            # EXACT MATCH (existing logic)
             if " " in kw_lower:
+                # Multi-word phrase
                 if kw_lower in text_lower:
                     scores[category] += weight
+                    matched = True
             else:
                 # Check single-word keywords against lemmas
                 kw_normalized = kw_lower.replace(" ", "_")
                 if kw_normalized in features.all_lemmas:
                     scores[category] += weight
+                    matched = True
+
+            # SIMILARITY MATCH (only if exact match failed and vectors available)
+            if not matched and has_vectors and " " not in kw_lower:
+                try:
+                    kw_token = nlp(kw_lower)[0]
+                    if kw_token.has_vector:
+                        # Check similarity against all text tokens
+                        for text_lemma, text_token in text_tokens.items():
+                            similarity = kw_token.similarity(text_token)
+                            if similarity >= similarity_threshold:
+                                # Partial score based on similarity
+                                scores[category] += weight * similarity
+                                break  # Only count best match per keyword
+                except (IndexError, KeyError):
+                    pass  # Skip if token can't be processed
 
     # Boost feature requests if modal present (only if no strong matches elsewhere)
     if features.has_modal and max(scores.values()) < 2.0:
@@ -326,8 +371,15 @@ def classify_issue(
     # Extract linguistic features
     features = extract_linguistic_features(nlp, full_text)
 
-    # Classify using context-aware rules
-    scores = classify_by_linguistic_features(features, rules, full_text, context=context)
+    # Get similarity threshold from config if available
+    similarity_threshold = 0.5  # default
+    if "_config" in rules:
+        similarity_threshold = rules["_config"].get("similarity_threshold", 0.5)
+
+    # Classify using context-aware rules with semantic similarity
+    scores = classify_by_linguistic_features(
+        features, rules, full_text, context=context, nlp=nlp, similarity_threshold=similarity_threshold
+    )
 
     # If no clear pattern, default to inquiry with low confidence
     if max(scores.values()) == 0:

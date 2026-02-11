@@ -199,9 +199,6 @@
             <div id="peopleKeywordMatrix"></div>
           </div>
           <div class="chart-card full-width">
-            <div id="documentationGaps"></div>
-          </div>
-          <div class="chart-card full-width">
             <div id="peopleActivity"></div>
           </div>
         </div>
@@ -262,7 +259,6 @@
             { default: KeywordTypeMatrix },
             { default: KeywordCooccurrence },
             { default: PeopleKeywordMatrix },
-            { default: DocumentationGaps },
             { default: PeopleActivity }
           ] = await Promise.all([
             import('../components/FilterStatus.svelte'),
@@ -272,7 +268,6 @@
             import('../components/KeywordTypeMatrix.svelte'),
             import('../components/KeywordCooccurrence.svelte'),
             import('../components/PeopleKeywordMatrix.svelte'),
-            import('../components/DocumentationGaps.svelte'),
             import('../components/PeopleActivity.svelte')
           ]);
 
@@ -313,11 +308,6 @@
               issues: analyzed.issues,
               peopleGraph: analyzed.people_graph
             }
-          });
-
-          mount(DocumentationGaps, {
-            target: document.getElementById('documentationGaps')!,
-            props: { issues: analyzed.issues }
           });
 
           mount(PeopleActivity, {

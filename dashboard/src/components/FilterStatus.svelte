@@ -16,7 +16,7 @@
 {#if hasFilters}
   <div class="filter-banner">
     <div class="filter-content">
-      <div class="filter-icon">🔍</div>
+      <div class="filter-icon">[Filter]</div>
       <div class="filter-text">
         <strong>Active Filters:</strong>
         {#if currentFilters.selectedIssueTypes.size > 0}

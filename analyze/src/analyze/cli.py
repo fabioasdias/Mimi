@@ -219,11 +219,11 @@ def suggest(
         )
 
     if not results["low_confidence"]:
-        click.echo("\n✓ All classifications above threshold!")
+        click.echo("\nAll classifications above threshold!")
         return
 
     click.echo(
-        f"\n⚠ {len(results['low_confidence'])} low-confidence classifications (< {confidence_threshold})"
+        f"\n{len(results['low_confidence'])} low-confidence classifications (< {confidence_threshold})"
     )
 
     if not interactive:
@@ -238,11 +238,11 @@ def suggest(
         return
 
     # Interactive mode - review and learn
-    click.echo("\n🎓 Interactive Learning Mode")
+    click.echo("\n=== Interactive Learning Mode ===")
     click.echo("Review low-confidence issues and provide corrections.\n")
 
     corrections = []
-    issue_types = ["outage", "defect", "enhancement", "inquiry", "routing_issue", "skip"]
+    issue_types = ["outage", "defect", "enhancement", "inquiry", "routing_issue", "action", "skip"]
 
     for idx, item in enumerate(results["low_confidence"][:20], 1):  # Max 20
         click.echo(f"\n[{idx}/{min(20, len(results['low_confidence']))}]")
@@ -270,7 +270,7 @@ def suggest(
 
         # Learn from this correction
         learned = learn_from_correction(full_issue, correct_type, gathered_path)
-        click.echo(f"  ✓ Learned keywords: {', '.join(learned['keywords'][:3])}")
+        click.echo(f"  Learned keywords: {', '.join(learned['keywords'][:3])}")
 
         corrections.append(
             {
@@ -286,11 +286,11 @@ def suggest(
         return
 
     # Apply learned patterns
-    click.echo(f"\n📝 Applying {len(corrections)} corrections...")
+    click.echo(f"\nApplying {len(corrections)} corrections...")
     rules_path = Path(__file__).parent.parent.parent / "classify_rules.custom.yaml"
     apply_learned_patterns(corrections, rules_path, context=context)
 
-    click.echo(f"✓ Updated {rules_path.name}")
+    click.echo(f"Updated {rules_path.name}")
     if context:
         click.echo(f"  Added patterns to context: {context}")
     click.echo(f"  Saved {len(corrections)} corrections")

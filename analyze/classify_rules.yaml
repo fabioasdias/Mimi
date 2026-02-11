@@ -1,6 +1,10 @@
 # Classification rules for support tickets
 # Each category has keywords/phrases and a weight (higher = more important)
 
+# Configuration for semantic similarity matching
+config:
+  similarity_threshold: 0.5  # 0.0 = exact match only, 1.0 = only identical words
+
 outage:
   weight: 1.0
   keywords:
@@ -93,3 +97,28 @@ inquiry:
     - what does
     - is it possible
     - tutorial
+
+action:
+  weight: 0.85
+  keywords:
+    # Operational requests
+    - please restart
+    - can you restart
+    - need you to
+    - could you
+    - please deploy
+    - can you deploy
+    - please grant
+    - need access
+    - grant access
+    - please approve
+    - can you approve
+    - please update
+    - please change
+    - please add me
+    - please remove
+    - please enable
+    - please disable
+    - please configure
+    - manually
+    - intervention required

@@ -66,7 +66,8 @@
       'enhancement': '#10b981',  // Green
       'clarification': '#f59e0b', // Yellow
       'inquiry': '#3b82f6',     // Blue
-      'routing_issue': '#64748b' // Gray
+      'routing_issue': '#64748b', // Gray
+      'action': '#ec4899'       // Pink
     };
 
     const getColor = (type: string) => typeColors[type] || '#9ca3af';
@@ -192,7 +193,8 @@
       { type: 'enhancement', label: 'Enhancement' },
       { type: 'clarification', label: 'Clarification' },
       { type: 'inquiry', label: 'Inquiry' },
-      { type: 'routing_issue', label: 'Routing Issue' }
+      { type: 'routing_issue', label: 'Routing Issue' },
+      { type: 'action', label: 'Action' }
     ];
 
     issueTypes.forEach((item, i) => {

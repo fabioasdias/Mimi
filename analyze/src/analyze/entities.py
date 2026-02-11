@@ -32,14 +32,17 @@ STOP_KEYWORDS = {
 
 
 def load_nlp() -> Language:
-    """Load spaCy model, downloading if needed."""
+    """Load spaCy model with word vectors for similarity matching.
+
+    Requires en_core_web_lg (500k vectors) for semantic similarity.
+    Install with: python -m spacy download en_core_web_lg
+    """
     try:
-        return spacy.load("en_core_web_sm")
+        return spacy.load("en_core_web_lg")
     except OSError:
         from spacy.cli import download
-
-        download("en_core_web_sm")
-        return spacy.load("en_core_web_sm")
+        download("en_core_web_lg")
+        return spacy.load("en_core_web_lg")
 
 
 def extract_keywords(
