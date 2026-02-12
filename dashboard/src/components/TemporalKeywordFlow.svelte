@@ -74,7 +74,7 @@
       binLabel = 'month';
     }
 
-    const timeBins = binInterval.range(dateExtent[0], binInterval.offset(dateExtent[1], 1));
+    const timeBins = binInterval.range(dateExtent[0], dateExtent[1]);
 
     // Fixed width - cells will scale to fit
     const maxContentWidth = 1050; // Fixed max width for content
