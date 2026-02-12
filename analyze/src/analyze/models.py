@@ -32,6 +32,8 @@ class IssueAnalysis(BaseModel):
     people: list[IssuePerson] = []
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    url: str | None = None  # Primary source URL
+    title: str | None = None
 
 
 class Identity(BaseModel):

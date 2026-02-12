@@ -202,6 +202,8 @@
             <div id="peopleActivity"></div>
           </div>
         </div>
+
+        <div id="issueList"></div>
       </div>
     </div>
 
@@ -253,6 +255,7 @@
           // Dynamically import and mount components
           const [
             { default: FilterStatus },
+            { default: IssueList },
             { default: TemporalKeywordFlow },
             { default: KeywordVolumeChart },
             { default: ClassificationBreakdown },
@@ -262,6 +265,7 @@
             { default: PeopleActivity }
           ] = await Promise.all([
             import('../components/FilterStatus.svelte'),
+            import('../components/IssueList.svelte'),
             import('../components/TemporalKeywordFlow.svelte'),
             import('../components/KeywordVolumeChart.svelte'),
             import('../components/ClassificationBreakdown.svelte'),
@@ -274,6 +278,12 @@
           // Render filter status
           mount(FilterStatus, {
             target: document.getElementById('filterStatus')!
+          });
+
+          // Render issue list
+          mount(IssueList, {
+            target: document.getElementById('issueList')!,
+            props: { issues: analyzed.issues }
           });
 
           // Render charts

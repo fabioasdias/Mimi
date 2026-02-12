@@ -3,6 +3,7 @@
   import * as d3 from 'd3';
   import type { IssueAnalysis } from '../lib/types';
   import { filters, issueMatchesFilters } from '../lib/store';
+  import { getIssueTypeColor, ISSUE_TYPES, ISSUE_TYPE_COLORS } from '../lib/colors';
 
   interface Props {
     issues: IssueAnalysis[];
@@ -11,16 +12,6 @@
   let { issues }: Props = $props();
   let container: HTMLDivElement;
   let mounted = $state(false);
-
-  // Color scheme for classification types
-  const typeColors: Record<string, string> = {
-    outage: '#ef4444',      // red
-    defect: '#f59e0b',      // amber
-    enhancement: '#10b981', // green
-    inquiry: '#3b82f6',     // blue
-    routing_issue: '#8b5cf6', // purple
-    action: '#ec4899',      // pink
-  };
 
   // Subscribe to filters and trigger update
   $effect(() => {
@@ -201,7 +192,7 @@
           .attr('y', cellY + offset)
           .attr('width', cellWidth)
           .attr('height', barHeight)
-          .attr('fill', typeColors[type] || '#6b7280')
+          .attr('fill', getIssueTypeColor(type))
           .attr('opacity', baseOpacity)
           .attr('stroke', '#fff')
           .attr('stroke-width', 0.5)
@@ -286,8 +277,7 @@
       .attr('fill', '#374151')
       .text('Issue Types');
 
-    const legendTypes = Object.keys(typeColors);
-    legendTypes.forEach((type, i) => {
+    ISSUE_TYPES.forEach((type, i) => {
       const legendRow = legend.append('g')
         .attr('transform', `translate(0, ${i * 25 + 20})`)
         .style('cursor', 'pointer')
@@ -296,7 +286,7 @@
       legendRow.append('rect')
         .attr('width', 16)
         .attr('height', 16)
-        .attr('fill', typeColors[type])
+        .attr('fill', getIssueTypeColor(type))
         .attr('opacity', 0.7)
         .attr('stroke', $filters.selectedIssueTypes.has(type) ? '#000' : '#fff')
         .attr('stroke-width', $filters.selectedIssueTypes.has(type) ? 2 : 1);

@@ -1,7 +1,7 @@
 """GitHub Issues API connector."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -42,11 +42,15 @@ class GitHubConnector(BaseConnector):
         since_days = self.filters.get("since_days")
 
         since = None
+        created_after = None
         if since_days:
-            since = datetime.now() - timedelta(days=int(since_days))
-            logger.debug("Filtering to last %s days (since %s)", since_days, since.isoformat())
+            since = datetime.now(timezone.utc) - timedelta(days=int(since_days))
+            created_after = datetime.now(timezone.utc) - timedelta(days=int(since_days))
+            logger.debug("Filtering to issues created in last %s days (after %s)", since_days, created_after.isoformat())
 
         issues: list[RawIssue] = []
+        total_fetched = 0
+        total_filtered = 0
 
         for repo in repos:
             logger.info("Fetching issues from %s (state=%s)", repo, state)
@@ -79,12 +83,21 @@ class GitHubConnector(BaseConnector):
                     # Skip pull requests (GitHub includes them in /issues)
                     if "pull_request" in issue_data:
                         continue
+
+                    total_fetched += 1
                     parsed_issue = await self._parse_issue(repo, issue_data)
+
+                    # Filter by created_at if since_days is specified
+                    if created_after and parsed_issue.created_at < created_after:
+                        total_filtered += 1
+                        continue
+
                     issues.append(parsed_issue)
 
                 page += 1
 
-            logger.info("Fetched %d issues from %s", len(issues), repo)
+        if total_filtered > 0:
+            logger.info("Total: fetched %d issues, filtered out %d (created before cutoff), kept %d", total_fetched, total_filtered, len(issues))
 
         return issues
 

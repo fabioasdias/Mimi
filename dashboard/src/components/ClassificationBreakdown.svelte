@@ -3,6 +3,7 @@
   import * as d3 from 'd3';
   import type { IssueAnalysis } from '../lib/types';
   import { filters, issueMatchesFilters } from '../lib/store';
+  import { getIssueTypeColor, ISSUE_TYPES } from '../lib/colors';
 
   interface Props {
     issues: IssueAnalysis[];
@@ -37,9 +38,7 @@
     const data = Array.from(counts, ([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count);
 
-    const color = d3.scaleOrdinal<string>()
-      .domain(data.map(d => d.type))
-      .range(['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']);
+    const color = (type: string) => getIssueTypeColor(type);
 
     const pie = d3.pie<{type: string; count: number}>()
       .value(d => d.count)

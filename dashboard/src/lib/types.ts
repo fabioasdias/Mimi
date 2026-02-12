@@ -14,6 +14,8 @@ export interface IssueAnalysis {
   classification: Classification;
   created_at?: string;
   updated_at?: string;
+  url?: string;
+  title?: string;
 }
 
 export interface Identity {

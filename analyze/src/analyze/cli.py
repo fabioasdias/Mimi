@@ -102,6 +102,12 @@ def main(
             for person in issue.get("people", [])
         ]
 
+        # Extract primary source URL from references
+        url = None
+        references = issue.get("references", [])
+        if references:
+            url = references[0].get("url")
+
         analyses.append(
             IssueAnalysis(
                 id=issue["id"],
@@ -109,6 +115,8 @@ def main(
                 people=people,
                 created_at=issue.get("created_at"),
                 updated_at=issue.get("updated_at"),
+                url=url,
+                title=issue.get("title"),
             )
         )
 
