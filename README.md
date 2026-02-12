@@ -1,7 +1,10 @@
-# Support Ticket Aggregator
+# Mîmî
 
 Aggregates support requests across multiple services (Jira, Slack, GitHub Issues, etc.), consolidates cross-referenced tickets, and analyzes them with NLP.
 
+## About the Name
+
+**Mîmî** comes from Michif/Cree, where it affectionately describes someone who fusses or makes their voice heard to get what they need. 
 ## Architecture
 
 Three decoupled modules connected by JSON files:
