@@ -2,6 +2,9 @@
 
 Aggregates support requests across multiple services (Jira, Slack, GitHub Issues, etc.), consolidates cross-referenced tickets, and analyzes them with NLP.
 
+<img width="1444" height="820" alt="image" src="https://github.com/user-attachments/assets/42574341-82e0-4e73-bfa5-f4eca4e91554" />
+
+
 ## About the Name
 
 **Mîmî** comes from Michif/Cree, where it affectionately describes someone who fusses or makes their voice heard to get what they need. 
